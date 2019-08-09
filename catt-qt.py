@@ -57,12 +57,11 @@ class App(QMainWindow):
 		self.dial.setMinimum(0)
 		self.dial.setMaximum(100)
 		self.dial.setValue(0)
-		self.dial_pressed = False
-		self.dial_value = 0.0
-		self.dial_user_modified = False
 		self.dial.valueChanged.connect(self.on_dial_moved)
-		self.dial.sliderPressed.connect(self.on_dial_pressed)
-		self.dial.sliderReleased.connect(self.on_dial_released)
+		self.volume_status_event_pending = False
+		self.volume_event_timer = QTimer()
+		self.volume_event_timer.timeout.connect(self.event_pending_expired)
+		self.volume_event_timer.setSingleShot(True)
 		self.textbox = QLineEdit()
 		self.play_button = QPushButton()
 		self.play_button.clicked.connect(self.on_play_click)
@@ -137,6 +136,7 @@ class App(QMainWindow):
 			# Hack: Change volume slightly to trigger
 			# status listener. This way, we can get the
 			# volume on startup.
+			self.volume_status_event_pending = True
 			d.volumedown(0.0000001)
 			print(d.name)
 			i = i + 1
@@ -201,13 +201,10 @@ class App(QMainWindow):
 		self.device_list[i].device.seek(self.device_list[i].duration - 3)
 
 	def on_dial_moved(self):
-		self.device_list[self.combo_box.currentIndex()].device.volume(self.dial.value() / 100)
-
-	def on_dial_pressed(self):
-		self.dial_user_modified = True
-
-	def on_dial_released(self):
-		self.dial_value = self.dial.value()
+		if not self.volume_status_event_pending:
+			self.volume_status_event_pending = True
+			self.device_list[self.combo_box.currentIndex()].device.volume(self.dial.value() / 100)
+			self.volume_event_timer.start(250)
 
 	def on_progress_pressed(self):
 		self.device_list[self.combo_box.currentIndex()].progress_timer.stop()
@@ -236,6 +233,9 @@ class App(QMainWindow):
 
 	def set_icon(self, button, icon):
 		button.setIcon(app.style().standardIcon(getattr(QStyle, icon)))
+
+	def event_pending_expired(self):
+		self.volume_status_event_pending = False
 
 class MediaListener:
 	def new_media_status(self, status):
@@ -310,6 +310,7 @@ class MediaListener:
 class StatusListener:
 	def new_cast_status(self, status):
 		_self = self._self
+		_self.volume_status_event_pending = False
 		i = _self.combo_box.currentIndex()
 		index = self.index
 		v = status.volume_level * 100
@@ -320,9 +321,6 @@ class StatusListener:
 		_self.device_list[i].volume = v
 		_self.device_list[i].status_text = status.status_text
 		_self.status_label.setText(status.status_text)
-		if _self.dial_user_modified and _self.dial_value != v:
-			return
-		_self.dial_user_modified = False
 		_self.dial.valueChanged.disconnect(_self.on_dial_moved)
 		_self.dial.setValue(v)
 		_self.dial.valueChanged.connect(_self.on_dial_moved)
