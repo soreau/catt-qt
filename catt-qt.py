@@ -57,7 +57,7 @@ class App(QMainWindow):
 		self.setGeometry(640, 480, self.width, self.height)
 		print('Scanning for Chromecast devices on the network...')
 		self.devices = catt.api.discover()
-		if self.devices == None:
+		if len(self.devices) == 0:
 			print('No devices found')
 			sys.exit(1)
 		self.combo_box = QComboBox()
