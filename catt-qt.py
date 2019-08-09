@@ -136,7 +136,6 @@ class App(QMainWindow):
 			# Hack: Change volume slightly to trigger
 			# status listener. This way, we can get the
 			# volume on startup.
-			self.volume_status_event_pending = True
 			d.volumedown(0.0000001)
 			print(d.name)
 			i = i + 1
@@ -310,7 +309,6 @@ class MediaListener:
 class StatusListener:
 	def new_cast_status(self, status):
 		_self = self._self
-		_self.volume_status_event_pending = False
 		i = _self.combo_box.currentIndex()
 		index = self.index
 		v = status.volume_level * 100
@@ -321,9 +319,11 @@ class StatusListener:
 		_self.device_list[i].volume = v
 		_self.device_list[i].status_text = status.status_text
 		_self.status_label.setText(status.status_text)
-		_self.dial.valueChanged.disconnect(_self.on_dial_moved)
-		_self.dial.setValue(v)
-		_self.dial.valueChanged.connect(_self.on_dial_moved)
+		if not _self.volume_status_event_pending:
+			_self.dial.valueChanged.disconnect(_self.on_dial_moved)
+			_self.dial.setValue(v)
+			_self.dial.valueChanged.connect(_self.on_dial_moved)
+		_self.volume_status_event_pending = False
 
 if __name__ == '__main__':
 	app = QApplication(sys.argv)
