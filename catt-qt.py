@@ -323,7 +323,9 @@ class StatusListener:
 		if _self.dial_user_modified and _self.dial_value != v:
 			return
 		_self.dial_user_modified = False
+		_self.dial.valueChanged.disconnect(_self.on_dial_moved)
 		_self.dial.setValue(v)
+		_self.dial.valueChanged.connect(_self.on_dial_moved)
 
 if __name__ == '__main__':
 	app = QApplication(sys.argv)
