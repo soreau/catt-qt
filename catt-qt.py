@@ -2,6 +2,7 @@
 
 # Copyright 2019 - Scott Moreau
 
+import os
 import sys
 import catt.api
 import pychromecast
@@ -105,6 +106,7 @@ class App(QMainWindow):
 
 	def initUI(self):
 		self.setWindowTitle(self.title)
+		self.setWindowIcon(QIcon(os.path.dirname(os.path.realpath(__file__)) + '/chromecast.png'))
 		self.setGeometry(640, 480, self.width, self.height)
 		print('Scanning for Chromecast devices on the network...')
 		self.devices = catt.api.discover()
