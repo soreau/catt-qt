@@ -25,7 +25,7 @@ class Device:
 		self.index = i
 		self._self = s
 		self.volume = 0
-		self.paused = False
+		self.paused = True
 		self.playing = False
 		self.device = d
 		self.duration = 0
@@ -45,6 +45,57 @@ class App(QMainWindow):
 	start_timer = pyqtSignal(int)
 	stop_timer = pyqtSignal(int)
 
+	def create_devices_layout(self):
+		self.devices_layout = QHBoxLayout()
+		self.combo_box = QComboBox()
+		self.devices_layout.addWidget(self.combo_box)
+
+	def create_control_layout(self):
+		self.control_layout = QHBoxLayout()
+		self.dial = QDial()
+		self.dial.setMinimum(0)
+		self.dial.setMaximum(100)
+		self.dial.setValue(0)
+		self.dial_pressed = False
+		self.dial_value = 0.0
+		self.dial_user_modified = False
+		self.dial.valueChanged.connect(self.on_dial_moved)
+		self.dial.sliderPressed.connect(self.on_dial_pressed)
+		self.dial.sliderReleased.connect(self.on_dial_released)
+		self.textbox = QLineEdit()
+		self.play_button = QPushButton()
+		self.play_button.clicked.connect(self.on_play_click)
+		self.set_icon(self.play_button, 'SP_MediaPlay')
+		self.stop_button = QPushButton()
+		self.stop_button.clicked.connect(self.on_stop_click)
+		self.set_icon(self.stop_button, 'SP_MediaStop')
+		self.control_layout.addWidget(self.play_button)
+		self.control_layout.addWidget(self.stop_button)
+		self.control_layout.addWidget(self.textbox)
+		self.control_layout.addWidget(self.dial)
+
+	def create_seek_layout(self):
+		self.seek_layout = QHBoxLayout()
+		self.progress_label = QLabel()
+		self.progress_label.setText('00:00:00')
+		self.progress_slider = QSlider(Qt.Horizontal)
+		self.progress_slider.setValue(0)
+		self.progress_slider.setEnabled(False)
+		self.progress_slider.sliderPressed.connect(self.on_progress_pressed)
+		self.progress_slider.sliderReleased.connect(self.on_progress_released)
+		self.skip_forward_button = QPushButton()
+		self.set_icon(self.skip_forward_button, 'SP_MediaSkipForward')
+		self.seek_layout.addWidget(self.progress_label)
+		self.seek_layout.addWidget(self.progress_slider)
+		self.seek_layout.addWidget(self.skip_forward_button)
+
+	def create_status_layout(self):
+		self.status_layout = QHBoxLayout()
+		self.status_label = QLabel()
+		self.status_label.setText('Idle')
+		self.status_label.setAlignment(Qt.AlignCenter)
+		self.status_layout.addWidget(self.status_label)
+
 	def __init__(self):
 		super().__init__()
 		self.title = 'Cast All The Things'
@@ -60,46 +111,13 @@ class App(QMainWindow):
 		if len(self.devices) == 0:
 			print('No devices found')
 			sys.exit(1)
-		self.combo_box = QComboBox()
-		self.combo_box.currentIndexChanged.connect(self.on_index_changed)
-		self.paused = True
 		self.window = QWidget()
 		self.main_layout = QVBoxLayout()
-		self.devices_layout = QHBoxLayout()
-		self.control_layout = QHBoxLayout()
-		self.seek_layout = QHBoxLayout()
-		self.status_layout = QHBoxLayout()
-		self.play_button = QPushButton()
-		self.stop_button = QPushButton()
-		self.skip_forward_button = QPushButton()
-		self.textbox = QLineEdit()
-		self.dial = QDial()
-		self.dial.setMinimum(0)
-		self.dial.setMaximum(100)
-		self.dial.setValue(0)
-		self.dial.valueChanged.connect(self.on_dial_moved)
-		self.dial.sliderPressed.connect(self.on_dial_pressed)
-		self.dial.sliderReleased.connect(self.on_dial_released)
-		self.dial_pressed = False
-		self.dial_value = 0.0
-		self.dial_user_modified = False
-		self.progress_label = QLabel()
-		self.progress_label.setText('00:00:00')
-		self.progress_slider = QSlider(Qt.Horizontal)
-		self.progress_slider.setValue(0)
-		self.progress_slider.setEnabled(False)
-		self.progress_slider.sliderPressed.connect(self.on_progress_pressed)
-		self.progress_slider.sliderReleased.connect(self.on_progress_released)
-		self.status_label = QLabel()
-		self.status_label.setText('Idle')
-		self.status_label.setAlignment(Qt.AlignCenter)
-		self.current_progress = 0
-		self.play_button.setIcon(app.style().standardIcon(getattr(QStyle, 'SP_MediaPlay')))
-		self.stop_button.setIcon(app.style().standardIcon(getattr(QStyle, 'SP_MediaStop')))
-		self.skip_forward_button.setIcon(app.style().standardIcon(getattr(QStyle, 'SP_MediaSkipForward')))
+		self.create_devices_layout()
+		self.create_control_layout()
+		self.create_seek_layout()
+		self.create_status_layout()
 		self.skip_forward_button.setEnabled(False)
-		self.play_button.clicked.connect(self.on_play_click)
-		self.stop_button.clicked.connect(self.on_stop_click)
 		self.skip_forward_button.clicked.connect(self.on_skip_click)
 		self.start_timer.connect(self.on_start_timer)
 		self.stop_timer.connect(self.on_stop_timer)
@@ -120,15 +138,7 @@ class App(QMainWindow):
 			d.volumedown(0.0000001)
 			print(d.name)
 			i = i + 1
-		self.devices_layout.addWidget(self.combo_box)
-		self.control_layout.addWidget(self.play_button)
-		self.control_layout.addWidget(self.stop_button)
-		self.control_layout.addWidget(self.textbox)
-		self.control_layout.addWidget(self.dial)
-		self.seek_layout.addWidget(self.progress_label)
-		self.seek_layout.addWidget(self.progress_slider)
-		self.seek_layout.addWidget(self.skip_forward_button)
-		self.status_layout.addWidget(self.status_label)
+		self.combo_box.currentIndexChanged.connect(self.on_index_changed)
 		self.main_layout.addLayout(self.devices_layout)
 		self.main_layout.addLayout(self.control_layout)
 		self.main_layout.addLayout(self.seek_layout)
@@ -139,57 +149,57 @@ class App(QMainWindow):
 		self.show()
 
 	def on_play_click(self):
-		i = self.combo_box.currentIndex()
+		d = self.device_list[self.combo_box.currentIndex()]
 		if (self.play_button.icon().name() == 'media-playback-start'):
-			if self.device_list[i].paused:
-				self.devices[i].play()
-				self.set_pause_icon()
-				self.device_list[i].paused = False
+			if d.paused and d.playing:
+				d.device.play()
+				self.set_icon(self.play_button, 'SP_MediaPause')
+				d.paused = False
 				return
 			text = self.textbox.text()
 			if "://" in text:
-				self.set_pause_icon()
-				self.devices[i].play_url(text, resolve=True, block=False)
+				self.set_icon(self.play_button, 'SP_MediaPause')
+				d.device.play_url(text, resolve=True, block=False)
 		elif (self.play_button.icon().name() == 'media-playback-pause'):
-			self.set_play_icon()
-			self.devices[i].pause()
-			self.device_list[i].paused = True
+			self.set_icon(self.play_button, 'SP_MediaPlay')
+			d.device.pause()
+			d.paused = True
+			d.progress_timer.stop()
 
 	def on_stop_click(self):
 		i = self.combo_box.currentIndex()
-		self.devices[i].stop()
+		self.device_list[i].device.stop()
 		self.stop_timer.emit(i)
 		self.device_list[i].time = QTime(0, 0, 0)
 		self.progress_slider.setValue(0)
 		self.progress_label.setText(self.device_list[i].time.toString("hh:mm:ss"))
-		self.set_play_icon()
+		self.set_icon(self.play_button, 'SP_MediaPlay')
 		self.skip_forward_button.setEnabled(False)
 		self.progress_slider.setEnabled(False)
 		self.device_list[i].playing = False
 
 	def on_index_changed(self):
-		i = self.combo_box.currentIndex()
-		if self.device_list[i].playing:
-			self.set_pause_icon()
+		d = self.device_list[self.combo_box.currentIndex()]
+		if d.playing and not d.paused:
+			self.set_icon(self.play_button, 'SP_MediaPause')
 		else:
-			self.set_play_icon()
-		self.skip_forward_button.setEnabled(self.device_list[i].playing)
-		self.progress_slider.setEnabled(self.device_list[i].playing)
-		self.progress_label.setText(self.device_list[i].time.toString("hh:mm:ss"))
-		self.progress_slider.setMaximum(self.device_list[i].duration)
-		self.progress_slider.setValue(time_to_seconds(self.device_list[i].time))
+			self.set_icon(self.play_button, 'SP_MediaPlay')
+		self.skip_forward_button.setEnabled(d.playing)
+		self.progress_slider.setEnabled(d.playing)
+		self.progress_label.setText(d.time.toString("hh:mm:ss"))
+		self.progress_slider.setMaximum(d.duration)
+		self.progress_slider.setValue(time_to_seconds(d.time))
 		self.dial.valueChanged.disconnect(self.on_dial_moved)
-		self.dial.setValue(self.device_list[i].volume)
+		self.dial.setValue(d.volume)
 		self.dial.valueChanged.connect(self.on_dial_moved)
-		self.status_label.setText(self.device_list[i].status_text)
+		self.status_label.setText(d.status_text)
 
 	def on_skip_click(self):
 		i = self.combo_box.currentIndex()
-		self.devices[i].seek(self.device_list[i].duration - 3)
+		self.device_list[i].device.seek(self.device_list[i].duration - 3)
 
 	def on_dial_moved(self):
-		i = self.combo_box.currentIndex()
-		self.devices[i].volume(self.dial.value() / 100)
+		self.device_list[self.combo_box.currentIndex()].device.volume(self.dial.value() / 100)
 
 	def on_dial_pressed(self):
 		self.dial_user_modified = True
@@ -202,13 +212,13 @@ class App(QMainWindow):
 		self.current_progress = self.progress_slider.value()
 
 	def on_progress_released(self):
-		i = self.combo_box.currentIndex()
+		d = self.device_list[self.combo_box.currentIndex()]
 		value = self.progress_slider.value()
-		if self.device_list[i].media_listener.supports_seek:
+		if d.media_listener.supports_seek:
 			if value > self.current_progress:
-				self.devices[i].seek(value)
+				d.device.seek(value)
 			elif value < self.current_progress:
-				self.devices[i].seek(value)
+				d.device.seek(value)
 		else:
 			print('Stream does not support seeking')
 
@@ -222,11 +232,8 @@ class App(QMainWindow):
 	def set_time(self, i, h, m, s):
 		self.device_list[i].time.setHMS(h, m, s)
 
-	def set_play_icon(self):
-		self.play_button.setIcon(app.style().standardIcon(getattr(QStyle, 'SP_MediaPlay')))
-
-	def set_pause_icon(self):
-		self.play_button.setIcon(app.style().standardIcon(getattr(QStyle, 'SP_MediaPause')))
+	def set_icon(self, button, icon):
+		button.setIcon(app.style().standardIcon(getattr(QStyle, icon)))
 
 class MediaListener:
 	def new_media_status(self, status):
@@ -235,37 +242,62 @@ class MediaListener:
 		index = self.index
 		self.supports_seek = status.supports_seek
 		if i != index:
+			d = _self.device_list[index]
 			if (status.player_state == 'PLAYING'):
-				_self.device_list[index].duration = status.duration
+				d.duration = status.duration
 				hours, minutes, seconds = self.split_seconds(int(status.current_time))
 				_self.set_time(index, hours, minutes, seconds)
 				_self.start_timer.emit(index)
-				_self.device_list[index].playing = True
+				d.paused = False
+				d.playing = True
+			elif (status.player_state == 'PAUSED'):
+				d.duration = status.duration
+				hours, minutes, seconds = self.split_seconds(int(status.current_time))
+				_self.set_time(index, hours, minutes, seconds)
+				d.paused = True
+				d.playing = True
 			elif ((status.player_state == 'IDLE' or status.player_state == 'UNKNOWN') and status.idle_reason == 'FINISHED'):
 				_self.stop_timer.emit(index)
-				_self.device_list[index].time = QTime(0, 0, 0)
-				_self.device_list[index].playing = False
+				d.time = QTime(0, 0, 0)
+				d.playing = False
+				d.paused = True
 			return
+		d = _self.device_list[i]
 		if (status.player_state == 'PLAYING'):
-			_self.device_list[i].duration = status.duration
+			d.duration = status.duration
 			_self.progress_slider.setMaximum(status.duration)
 			_self.progress_slider.setValue(status.current_time)
 			hours, minutes, seconds = self.split_seconds(int(status.current_time))
 			_self.set_time(i, hours, minutes, seconds)
-			_self.start_timer.emit(i)
 			_self.skip_forward_button.setEnabled(True)
 			_self.progress_slider.setEnabled(True)
-			_self.device_list[i].playing = True
-			_self.progress_label.setText(_self.device_list[i].time.toString("hh:mm:ss"))
+			d.paused = False
+			d.playing = True
+			_self.set_icon(_self.play_button, 'SP_MediaPause')
+			_self.progress_label.setText(d.time.toString("hh:mm:ss"))
+			_self.start_timer.emit(i)
+		elif (status.player_state == 'PAUSED'):
+			d.duration = status.duration
+			_self.progress_slider.setMaximum(status.duration)
+			_self.progress_slider.setValue(status.current_time)
+			hours, minutes, seconds = self.split_seconds(int(status.current_time))
+			_self.set_time(index, hours, minutes, seconds)
+			_self.skip_forward_button.setEnabled(True)
+			_self.progress_slider.setEnabled(True)
+			d.paused = True
+			d.playing = True
+			_self.set_icon(_self.play_button, 'SP_MediaPlay')
+			_self.progress_label.setText(d.time.toString("hh:mm:ss"))
 		elif ((status.player_state == 'IDLE' or status.player_state == 'UNKNOWN') and status.idle_reason == 'FINISHED'):
-			_self.set_play_icon()
+			_self.set_icon(_self.play_button, 'SP_MediaPlay')
 			_self.skip_forward_button.setEnabled(False)
 			_self.progress_slider.setEnabled(False)
-			_self.device_list[i].playing = False
+			d.playing = False
+			d.paused = True
 			_self.progress_slider.setValue(0)
 			_self.stop_timer.emit(i)
-			_self.device_list[i].time = QTime(0, 0, 0)
-			_self.progress_label.setText(_self.device_list[i].time.toString("hh:mm:ss"))
+			d.time = QTime(0, 0, 0)
+			_self.progress_label.setText(d.time.toString("hh:mm:ss"))
 
 	def split_seconds(self, s):
 		hours = s // 3600
