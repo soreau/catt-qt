@@ -79,6 +79,8 @@ class App(QMainWindow):
 		self.dial.sliderPressed.connect(self.on_dial_pressed)
 		self.dial.sliderReleased.connect(self.on_dial_released)
 		self.dial_pressed = False
+		self.dial_value = 0.0
+		self.dial_user_modified = False
 		self.progress_label = QLabel()
 		self.progress_label.setText('00:00:00')
 		self.progress_slider = QSlider(Qt.Horizontal)
@@ -176,10 +178,10 @@ class App(QMainWindow):
 		self.devices[i].volume(self.dial.value() / 100)
 
 	def on_dial_pressed(self):
-		self.dial_pressed = True
+		self.dial_user_modified = True
 
 	def on_dial_released(self):
-		self.dial_pressed = False
+		self.dial_value = self.dial.value()
 
 	def on_progress_pressed(self):
 		self.device_list[self.combo_box.currentIndex()].progress_timer.stop()
@@ -266,9 +268,11 @@ class StatusListener:
 		if i != index:
 			_self.device_list[index].volume = v
 			return
-		if not _self.dial_pressed:
-			_self.dial.setValue(v)
-			_self.device_list[i].volume = v
+		_self.device_list[i].volume = v
+		if _self.dial_user_modified and _self.dial_value != v:
+			return
+		_self.dial_user_modified = False
+		_self.dial.setValue(v)
 
 if __name__ == '__main__':
 	app = QApplication(sys.argv)
