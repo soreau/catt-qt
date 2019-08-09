@@ -29,6 +29,7 @@ class Device:
 		self.playing = False
 		self.device = d
 		self.duration = 0
+		self.status_text = None
 		self.progress_timer = QTimer()
 		self.time = QTime(0, 0, 0)
 		self.progress_timer.timeout.connect(self.on_progress_tick)
@@ -67,6 +68,7 @@ class App(QMainWindow):
 		self.devices_layout = QHBoxLayout()
 		self.control_layout = QHBoxLayout()
 		self.seek_layout = QHBoxLayout()
+		self.status_layout = QHBoxLayout()
 		self.play_button = QPushButton()
 		self.stop_button = QPushButton()
 		self.skip_forward_button = QPushButton()
@@ -88,6 +90,9 @@ class App(QMainWindow):
 		self.progress_slider.setEnabled(False)
 		self.progress_slider.sliderPressed.connect(self.on_progress_pressed)
 		self.progress_slider.sliderReleased.connect(self.on_progress_released)
+		self.status_label = QLabel()
+		self.status_label.setText('Idle')
+		self.status_label.setAlignment(Qt.AlignCenter)
 		self.current_progress = 0
 		self.play_button.setIcon(app.style().standardIcon(getattr(QStyle, 'SP_MediaPlay')))
 		self.stop_button.setIcon(app.style().standardIcon(getattr(QStyle, 'SP_MediaStop')))
@@ -123,9 +128,11 @@ class App(QMainWindow):
 		self.seek_layout.addWidget(self.progress_label)
 		self.seek_layout.addWidget(self.progress_slider)
 		self.seek_layout.addWidget(self.skip_forward_button)
+		self.status_layout.addWidget(self.status_label)
 		self.main_layout.addLayout(self.devices_layout)
 		self.main_layout.addLayout(self.control_layout)
 		self.main_layout.addLayout(self.seek_layout)
+		self.main_layout.addLayout(self.status_layout)
 		self.widget = QWidget()
 		self.widget.setLayout(self.main_layout)
 		self.setCentralWidget(self.widget)
@@ -172,6 +179,7 @@ class App(QMainWindow):
 		self.progress_slider.setMaximum(self.device_list[i].duration)
 		self.progress_slider.setValue(time_to_seconds(self.device_list[i].time))
 		self.dial.setValue(self.device_list[i].volume)
+		self.status_label.setText(self.device_list[i].status_text)
 
 	def on_skip_click(self):
 		i = self.combo_box.currentIndex()
@@ -232,7 +240,7 @@ class MediaListener:
 				_self.start_timer.emit(index)
 				_self.device_list[index].playing = True
 			elif ((status.player_state == 'IDLE' or status.player_state == 'UNKNOWN') and status.idle_reason == 'FINISHED'):
-				self.stop_timer.emit(index)
+				_self.stop_timer.emit(index)
 				_self.device_list[index].time = QTime(0, 0, 0)
 				_self.device_list[index].playing = False
 			return
@@ -271,8 +279,11 @@ class StatusListener:
 		v = status.volume_level * 100
 		if i != index:
 			_self.device_list[index].volume = v
+			_self.device_list[index].status_text = status.status_text
 			return
 		_self.device_list[i].volume = v
+		_self.device_list[i].status_text = status.status_text
+		_self.status_label.setText(status.status_text)
 		if _self.dial_user_modified and _self.dial_value != v:
 			return
 		_self.dial_user_modified = False
