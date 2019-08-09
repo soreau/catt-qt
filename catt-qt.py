@@ -178,7 +178,9 @@ class App(QMainWindow):
 		self.progress_label.setText(self.device_list[i].time.toString("hh:mm:ss"))
 		self.progress_slider.setMaximum(self.device_list[i].duration)
 		self.progress_slider.setValue(time_to_seconds(self.device_list[i].time))
+		self.dial.valueChanged.disconnect(self.on_dial_moved)
 		self.dial.setValue(self.device_list[i].volume)
+		self.dial.valueChanged.connect(self.on_dial_moved)
 		self.status_label.setText(self.device_list[i].status_text)
 
 	def on_skip_click(self):
