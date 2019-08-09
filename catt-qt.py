@@ -109,6 +109,10 @@ class App(QMainWindow):
 			cast.register_status_listener(device.status_listener)
 			self.device_list.append(device)
 			self.combo_box.addItem(d.name)
+			# Hack: Change volume slightly to trigger
+			# status listener. This way, we can get the
+			# volume on startup.
+			d.volumedown(0.0000001)
 			print(d.name)
 			i = i + 1
 		self.devices_layout.addWidget(self.combo_box)
