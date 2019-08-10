@@ -169,7 +169,8 @@ class App(QMainWindow):
 			d.progress_timer.stop()
 
 	def on_stop_click(self):
-		d = self.device_list[self.combo_box.currentIndex()]
+		i = self.combo_box.currentIndex()
+		d = self.device_list[i]
 		d.device.stop()
 		self.stop_timer.emit(i)
 		d.time = QTime(0, 0, 0)
