@@ -151,8 +151,8 @@ class App(QMainWindow):
 
 	def on_play_click(self):
 		d = self.device_list[self.combo_box.currentIndex()]
-		if (self.play_button.icon().name() == 'media-playback-start'):
-			if d.paused and d.playing:
+		if (d.paused):
+			if d.playing:
 				d.device.play()
 				self.set_icon(self.play_button, 'SP_MediaPause')
 				d.paused = False
@@ -161,7 +161,7 @@ class App(QMainWindow):
 			if "://" in text:
 				self.set_icon(self.play_button, 'SP_MediaPause')
 				d.device.play_url(text, resolve=True, block=False)
-		elif (self.play_button.icon().name() == 'media-playback-pause'):
+		elif (d.playing):
 			self.set_icon(self.play_button, 'SP_MediaPlay')
 			d.device.pause()
 			d.paused = True
@@ -178,6 +178,7 @@ class App(QMainWindow):
 		self.skip_forward_button.setEnabled(False)
 		self.progress_slider.setEnabled(False)
 		self.device_list[i].playing = False
+		self.device_list[i].paused = True
 
 	def on_index_changed(self):
 		d = self.device_list[self.combo_box.currentIndex()]
@@ -289,7 +290,7 @@ class MediaListener:
 			d.playing = True
 			_self.set_icon(_self.play_button, 'SP_MediaPlay')
 			_self.progress_label.setText(d.time.toString("hh:mm:ss"))
-		elif ((status.player_state == 'IDLE' or status.player_state == 'UNKNOWN') and status.idle_reason == 'FINISHED'):
+		elif ((status.player_state == 'IDLE' or status.player_state == 'UNKNOWN') and (status.idle_reason == 'FINISHED' or status.idle_reason == None)):
 			_self.set_icon(_self.play_button, 'SP_MediaPlay')
 			_self.skip_forward_button.setEnabled(False)
 			_self.progress_slider.setEnabled(False)
