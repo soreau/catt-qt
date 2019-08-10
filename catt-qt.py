@@ -212,10 +212,15 @@ class App(QMainWindow):
 		self.device_list[i].device.seek(self.device_list[i].duration - 3)
 
 	def on_dial_moved(self):
+		d = self.device_list[self.combo_box.currentIndex()]
 		if not self.volume_status_event_pending:
 			self.volume_status_event_pending = True
-			self.device_list[self.combo_box.currentIndex()].device.volume(self.dial.value() / 100)
+			d.device.volume(self.dial.value() / 100)
 			self.volume_event_timer.start(250)
+		elif self.dial.value() == 0:
+			d.device.volume(0.0)
+		elif self.dial.value() == 100
+			d.device.volume(1.0)
 
 	def on_progress_pressed(self):
 		self.device_list[self.combo_box.currentIndex()].progress_timer.stop()
