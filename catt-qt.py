@@ -189,7 +189,8 @@ class App(QMainWindow):
 		self.skip_forward_button.setEnabled(d.playing)
 		self.progress_slider.setEnabled(d.playing)
 		self.progress_label.setText(d.time.toString("hh:mm:ss"))
-		self.progress_slider.setMaximum(d.duration)
+		if d.duration != None:
+			self.progress_slider.setMaximum(d.duration)
 		self.progress_slider.setValue(time_to_seconds(d.time))
 		self.dial.valueChanged.disconnect(self.on_dial_moved)
 		self.dial.setValue(d.volume)
