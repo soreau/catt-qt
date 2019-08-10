@@ -282,9 +282,8 @@ class MediaListener:
                 d.paused = True
                 d.playing = True
             elif status.player_state == "IDLE" or status.player_state == "UNKNOWN":
-                if status.idle_reason == "FINISHED":
-                    _self.stop_timer.emit(index)
-                    d.time = QTime(0, 0, 0)
+                _self.stop_timer.emit(index)
+                d.time = QTime(0, 0, 0)
                 d.playing = False
                 d.paused = True
                 d.live = False
@@ -324,10 +323,9 @@ class MediaListener:
             _self.set_icon(_self.play_button, "SP_MediaPlay")
             _self.progress_label.setText(d.time.toString("hh:mm:ss"))
         elif status.player_state == "IDLE" or status.player_state == "UNKNOWN":
-            if status.idle_reason == "FINISHED":
-                _self.progress_slider.setValue(0)
-                _self.stop_timer.emit(i)
-                d.time = QTime(0, 0, 0)
+            _self.progress_slider.setValue(0)
+            _self.stop_timer.emit(i)
+            d.time = QTime(0, 0, 0)
             _self.skip_forward_button.setEnabled(False)
             _self.progress_slider.setEnabled(False)
             _self.progress_label.setText(d.time.toString("hh:mm:ss"))
