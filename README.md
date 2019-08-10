@@ -13,8 +13,7 @@ Features:
 Limitations:
 - Takes about 8 seconds to scan for chromecasts when started
 - Doesn't support loading playlists or files
-- Can't seek through hulu commercials
-- Requires a chromecast to use
+- Requires restart after any chromecast restarts
 
 Usage:
 - Install [catt](https://github.com/skorokithakis/catt) and [pychromecast](https://github.com/balloob/pychromecast)
