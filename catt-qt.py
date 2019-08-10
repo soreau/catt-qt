@@ -290,7 +290,7 @@ class MediaListener:
 			d.playing = True
 			_self.set_icon(_self.play_button, 'SP_MediaPlay')
 			_self.progress_label.setText(d.time.toString("hh:mm:ss"))
-		elif ((status.player_state == 'IDLE' or status.player_state == 'UNKNOWN') and (status.idle_reason == 'FINISHED' or status.idle_reason == None)):
+		elif ((status.player_state == 'IDLE' or status.player_state == 'UNKNOWN') and status.idle_reason == 'FINISHED'):
 			_self.set_icon(_self.play_button, 'SP_MediaPlay')
 			_self.skip_forward_button.setEnabled(False)
 			_self.progress_slider.setEnabled(False)
