@@ -219,7 +219,7 @@ class App(QMainWindow):
 			self.volume_event_timer.start(250)
 		elif self.dial.value() == 0:
 			d.device.volume(0.0)
-		elif self.dial.value() == 100
+		elif self.dial.value() == 100:
 			d.device.volume(1.0)
 
 	def on_progress_pressed(self):
