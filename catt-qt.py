@@ -5,10 +5,18 @@
 import os
 import sys
 import catt.api
+from catt.api import CattDevice
 import pychromecast
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import Qt, QTimer, QTime, pyqtSignal
+
+
+# On Chromecast reboot, the volume is set to maximum.
+# This value is used to set a custom initial volume
+# if a Chromecast is rebooted while this program is
+# running. The range is 0.0 - 1.0.
+REBOOT_VOLUME = 0.25
 
 
 def time_to_seconds(time):
@@ -24,6 +32,8 @@ class Device:
         self.status_listener = StatusListener()
         self.status_listener._self = s
         self.status_listener.index = i
+        self.connection_listener = ConnectionListener()
+        self.connection_listener._self = s
         self.index = i
         self._self = s
         self.volume = 0
@@ -48,6 +58,8 @@ class Device:
 class App(QMainWindow):
     start_timer = pyqtSignal(int)
     stop_timer = pyqtSignal(int)
+    add_device = pyqtSignal(str)
+    remove_device = pyqtSignal(str)
 
     def create_devices_layout(self):
         self.devices_layout = QHBoxLayout()
@@ -114,7 +126,8 @@ class App(QMainWindow):
         self.setGeometry(640, 480, self.width, self.height)
         print("Scanning for Chromecast devices on the network...")
         self.devices = catt.api.discover()
-        if len(self.devices) == 0:
+        num_devices = len(self.devices)
+        if num_devices == 0:
             print("No devices found")
             sys.exit(1)
         self.window = QWidget()
@@ -127,8 +140,14 @@ class App(QMainWindow):
         self.skip_forward_button.clicked.connect(self.on_skip_click)
         self.start_timer.connect(self.on_start_timer)
         self.stop_timer.connect(self.on_stop_timer)
+        self.add_device.connect(self.on_add_device)
+        self.remove_device.connect(self.on_remove_device)
         self.device_list = []
-        print(len(self.devices), "devices found")
+        if num_devices > 1:
+            text = "devices found"
+        else:
+            text = "device found"
+        print(num_devices, text)
         i = 0
         for d in self.devices:
             cast = pychromecast.Chromecast(d.ip_addr)
@@ -136,8 +155,10 @@ class App(QMainWindow):
             device = Device(self, d, i)
             cast.media_controller.register_status_listener(device.media_listener)
             cast.register_status_listener(device.status_listener)
+            cast.register_connection_listener(device.connection_listener)
             self.device_list.append(device)
             self.combo_box.addItem(d.name)
+            device.cast = cast
             # Hack: Change volume slightly to trigger
             # status listener. This way, we can get the
             # volume on startup.
@@ -189,7 +210,9 @@ class App(QMainWindow):
 
     def on_index_changed(self):
         i = self.combo_box.currentIndex()
-        d = self.device_list[i]
+        d = self.get_device_from_index(i)
+        if d == None:
+            return
         if d.playing and not d.paused:
             self.set_icon(self.play_button, "SP_MediaPause")
         else:
@@ -257,12 +280,78 @@ class App(QMainWindow):
     def event_pending_expired(self):
         self.volume_status_event_pending = False
 
+    def on_add_device(self, ip):
+        for d in self.device_list:
+            if d.device.ip_addr == ip:
+                try:
+                    d.cast.socket_client._connection_listeners.remove(
+                        d.connection_listener
+                    )
+                except:
+                    print("Unregistering connection listener failed")
+                self.devices.remove(d.device)
+                self.device_list.remove(d)
+                break
+        d = CattDevice(ip_addr=ip)
+        d._cast.wait()
+        device = Device(self, d, len(self.device_list))
+        d._cast.media_controller.register_status_listener(device.media_listener)
+        d._cast.register_status_listener(device.status_listener)
+        d._cast.register_connection_listener(device.connection_listener)
+        self.devices.append(d)
+        self.device_list.append(device)
+        self.combo_box.addItem(d.name)
+        d.volume(REBOOT_VOLUME)
+
+    def on_remove_device(self, ip):
+        d = self.get_device_from_ip(ip)
+        if d == None:
+            return
+        try:
+            d.cast.media_controller._status_listeners.remove(d.media_listener)
+        except:
+            print("Unregistering media controller failed")
+        try:
+            d.cast.socket_client.receiver_controller._status_listeners.remove(
+                d.status_listener
+            )
+        except:
+            print("Unregistering status listener failed")
+        self.combo_box.clear()
+        i = 0
+        for _d in self.device_list:
+            if d != _d:
+                self.combo_box.addItem(_d.device.name)
+                _d.media_listener.index = _d.status_listener.index = _d.index = i
+                i = i + 1
+            else:
+                _d.media_listener.index = _d.status_listener.index = _d.index = -1
+        self.on_index_changed()
+
+    def get_device_from_ip(self, ip):
+        d = None
+        for _d in self.device_list:
+            if _d.device.ip_addr == ip:
+                d = _d
+                break
+        return d
+
+    def get_device_from_index(self, i):
+        d = None
+        for _d in self.device_list:
+            if _d.index == i:
+                d = _d
+                break
+        return d
+
 
 class MediaListener:
     def new_media_status(self, status):
         _self = self._self
         i = _self.combo_box.currentIndex()
         index = self.index
+        if index == -1:
+            return
         self.supports_seek = status.supports_seek
         if i != index:
             d = _self.device_list[index]
@@ -338,7 +427,7 @@ class MediaListener:
     def split_seconds(self, s):
         hours = s // 3600
         minutes = (s - (hours * 3600)) // 60
-        seconds = s - (minutes * 60)
+        seconds = s - ((hours * 3600) + (minutes * 60))
         return hours, minutes, seconds
 
 
@@ -347,19 +436,34 @@ class StatusListener:
         _self = self._self
         i = _self.combo_box.currentIndex()
         index = self.index
-        v = status.volume_level * 100
-        if i != index:
-            _self.device_list[index].volume = v
-            _self.device_list[index].status_text = status.status_text
+        if index == -1:
             return
-        _self.device_list[i].volume = v
-        _self.device_list[i].status_text = status.status_text
+        v = status.volume_level * 100
+        d = _self.device_list[index]
+        if i != index:
+            d.volume = v
+            d.status_text = status.status_text
+            return
+        d = _self.device_list[i]
+        d.volume = v
+        d.status_text = status.status_text
         _self.status_label.setText(status.status_text)
         if not _self.volume_status_event_pending:
             _self.dial.valueChanged.disconnect(_self.on_dial_moved)
             _self.dial.setValue(v)
             _self.dial.valueChanged.connect(_self.on_dial_moved)
         _self.volume_status_event_pending = False
+
+
+class ConnectionListener:
+    def new_connection_status(self, status):
+        _self = self._self
+        if status.status == "CONNECTED":
+            print(status.address.address, "connected")
+            _self.add_device.emit(status.address.address)
+        elif status.status == "LOST":
+            print(status.address.address, "disconnected")
+            _self.remove_device.emit(status.address.address)
 
 
 if __name__ == "__main__":
