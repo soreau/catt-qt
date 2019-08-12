@@ -24,7 +24,7 @@ def time_to_seconds(time):
 
 
 class Device:
-    def __init__(self=None, s=None, d=None, i=0):
+    def __init__(self, s, d, c, i=0):
         self.media_listener = MediaListener()
         self.media_listener._self = s
         self.media_listener.supports_seek = False
@@ -34,6 +34,7 @@ class Device:
         self.status_listener.index = i
         self.connection_listener = ConnectionListener()
         self.connection_listener._self = s
+        self.cast = c
         self.index = i
         self._self = s
         self.volume = 0
@@ -152,13 +153,12 @@ class App(QMainWindow):
         for d in self.devices:
             cast = pychromecast.Chromecast(d.ip_addr)
             cast.wait()
-            device = Device(self, d, i)
+            device = Device(self, d, cast, i)
             cast.media_controller.register_status_listener(device.media_listener)
             cast.register_status_listener(device.status_listener)
             cast.register_connection_listener(device.connection_listener)
             self.device_list.append(device)
             self.combo_box.addItem(d.name)
-            device.cast = cast
             # Hack: Change volume slightly to trigger
             # status listener. This way, we can get the
             # volume on startup.
@@ -178,6 +178,8 @@ class App(QMainWindow):
     def on_play_click(self):
         i = self.combo_box.currentIndex()
         d = self.get_device_from_index(i)
+        if d == None:
+            return
         if d.paused:
             if d.playing:
                 d.device.play()
@@ -197,6 +199,8 @@ class App(QMainWindow):
     def on_stop_click(self):
         i = self.combo_box.currentIndex()
         d = self.get_device_from_index(i)
+        if d == None:
+            return
         d.device.stop()
         self.stop_timer.emit(i)
         d.time = QTime(0, 0, 0)
@@ -210,6 +214,14 @@ class App(QMainWindow):
         d.live = False
 
     def on_index_changed(self):
+        if not self.active_devices():
+            self.play_button.setEnabled(False)
+            self.stop_button.setEnabled(False)
+            self.progress_slider.setEnabled(False)
+            self.skip_forward_button.setEnabled(False)
+            self.set_icon(self.play_button, "SP_MediaPlay")
+            self.progress_label.setText("00:00:00")
+            return
         i = self.combo_box.currentIndex()
         d = self.get_device_from_index(i)
         if d == None:
@@ -224,12 +236,14 @@ class App(QMainWindow):
         self.play_button.setEnabled(not d.live)
         if d.live:
             self.progress_label.setText("LIVE")
-            self.stop_timer.emit(i)
+            self.stop_timer.emit(d.index)
         else:
             self.progress_label.setText(d.time.toString("hh:mm:ss"))
             if d.duration != None:
                 self.progress_slider.setMaximum(d.duration)
             self.progress_slider.setValue(time_to_seconds(d.time))
+            self.play_button.setEnabled(True)
+            self.stop_button.setEnabled(True)
         self.dial.valueChanged.disconnect(self.on_dial_moved)
         self.dial.setValue(d.volume)
         self.dial.valueChanged.connect(self.on_dial_moved)
@@ -238,11 +252,15 @@ class App(QMainWindow):
     def on_skip_click(self):
         i = self.combo_box.currentIndex()
         d = self.get_device_from_index(i)
+        if d == None:
+            return
         d.device.seek(d.duration - 3)
 
     def on_dial_moved(self):
         i = self.combo_box.currentIndex()
         d = self.get_device_from_index(i)
+        if d == None:
+            return
         if not self.volume_status_event_pending:
             self.volume_status_event_pending = True
             d.device.volume(self.dial.value() / 100)
@@ -255,12 +273,16 @@ class App(QMainWindow):
     def on_progress_pressed(self):
         i = self.combo_box.currentIndex()
         d = self.get_device_from_index(i)
+        if d == None:
+            return
         d.progress_timer.stop()
         self.current_progress = self.progress_slider.value()
 
     def on_progress_released(self):
         i = self.combo_box.currentIndex()
         d = self.get_device_from_index(i)
+        if d == None:
+            return
         value = self.progress_slider.value()
         if d.media_listener.supports_seek:
             if value > self.current_progress:
@@ -272,15 +294,21 @@ class App(QMainWindow):
 
     def on_start_timer(self, i):
         d = self.get_device_from_index(i)
+        if d == None:
+            return
         d.progress_timer.start(1000)
 
     def on_stop_timer(self, i):
         d = self.get_device_from_index(i)
+        if d == None:
+            return
         d.progress_timer.stop()
         d.time.setHMS(0, 0, 0)
 
     def set_time(self, i, h, m, s):
         d = self.get_device_from_index(i)
+        if d == None:
+            return
         d.time.setHMS(h, m, s)
 
     def set_icon(self, button, icon):
@@ -292,21 +320,17 @@ class App(QMainWindow):
     def on_add_device(self, ip):
         for d in self.device_list:
             if d.device.ip_addr == ip:
-                try:
-                    d.cast.socket_client._connection_listeners.remove(
-                        d.connection_listener
-                    )
-                except:
-                    print("Unregistering connection listener failed")
                 self.devices.remove(d.device)
                 self.device_list.remove(d)
                 break
+        if not self.active_devices():
+            self.play_button.setEnabled(True)
+            self.stop_button.setEnabled(True)
         d = CattDevice(ip_addr=ip)
         d._cast.wait()
-        device = Device(self, d, len(self.device_list))
+        device = Device(self, d, d._cast, self.combo_box.count())
         d._cast.media_controller.register_status_listener(device.media_listener)
         d._cast.register_status_listener(device.status_listener)
-        d._cast.register_connection_listener(device.connection_listener)
         self.devices.append(d)
         self.device_list.append(device)
         self.combo_box.addItem(d.name)
@@ -318,18 +342,23 @@ class App(QMainWindow):
             return
         try:
             d.cast.media_controller._status_listeners.remove(d.media_listener)
-        except:
-            print("Unregistering media controller failed")
+        except Exception as e:
+            print(ip, "Unregistering media controller failed:", e)
         try:
             d.cast.socket_client.receiver_controller._status_listeners.remove(
                 d.status_listener
             )
-        except:
-            print("Unregistering status listener failed")
+        except Exception as e:
+            print(ip, "Unregistering status listener failed:", e)
+        self.stop_timer.emit(d.index)
+        d.time = QTime(0, 0, 0)
+        d.playing = False
+        d.paused = True
+        d.live = False
         self.combo_box.clear()
         i = 0
         for _d in self.device_list:
-            if d != _d:
+            if d != _d and _d.index != -1:
                 self.combo_box.addItem(_d.device.name)
                 _d.media_listener.index = _d.status_listener.index = _d.index = i
                 i = i + 1
@@ -338,20 +367,22 @@ class App(QMainWindow):
         self.on_index_changed()
 
     def get_device_from_ip(self, ip):
-        d = None
-        for _d in self.device_list:
-            if _d.device.ip_addr == ip:
-                d = _d
-                break
-        return d
+        for d in self.device_list:
+            if d.device.ip_addr == ip:
+                return d
+        return None
 
     def get_device_from_index(self, i):
-        d = None
-        for _d in self.device_list:
-            if _d.index == i:
-                d = _d
-                break
-        return d
+        for d in self.device_list:
+            if d.index == i:
+                return d
+        return None
+
+    def active_devices(self):
+        for d in self.device_list:
+            if d.index != -1:
+                return True
+        return False
 
 
 class MediaListener:
@@ -364,6 +395,8 @@ class MediaListener:
         self.supports_seek = status.supports_seek
         if i != index:
             d = _self.get_device_from_index(index)
+            if d == None:
+                return
             d.duration = status.duration
             if status.player_state == "PLAYING":
                 hours, minutes, seconds = self.split_seconds(int(status.current_time))
@@ -387,6 +420,8 @@ class MediaListener:
                 d.live = False
             return
         d = _self.get_device_from_index(i)
+        if d == None:
+            return
         d.duration = status.duration
         if status.player_state == "PLAYING":
             if status.duration != None:
@@ -403,7 +438,7 @@ class MediaListener:
             _self.start_timer.emit(i)
             if status.stream_type == "LIVE":
                 d.live = True
-                _self.stop_timer.emit(index)
+                _self.stop_timer.emit(i)
                 _self.skip_forward_button.setEnabled(False)
                 _self.progress_slider.setEnabled(False)
                 _self.play_button.setEnabled(False)
@@ -413,7 +448,7 @@ class MediaListener:
                 _self.progress_slider.setMaximum(status.duration)
             _self.progress_slider.setValue(status.current_time)
             hours, minutes, seconds = self.split_seconds(int(status.current_time))
-            _self.set_time(index, hours, minutes, seconds)
+            _self.set_time(i, hours, minutes, seconds)
             _self.skip_forward_button.setEnabled(True)
             _self.progress_slider.setEnabled(True)
             d.paused = True
@@ -449,11 +484,15 @@ class StatusListener:
             return
         v = status.volume_level * 100
         d = _self.get_device_from_index(index)
+        if d == None:
+            return
         if i != index:
             d.volume = v
             d.status_text = status.status_text
             return
         d = _self.get_device_from_index(i)
+        if d == None:
+            return
         d.volume = v
         d.status_text = status.status_text
         _self.status_label.setText(status.status_text)
