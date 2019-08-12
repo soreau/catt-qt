@@ -176,7 +176,8 @@ class App(QMainWindow):
         self.show()
 
     def on_play_click(self):
-        d = self.device_list[self.combo_box.currentIndex()]
+        i = self.combo_box.currentIndex()
+        d = self.get_device_from_index(i)
         if d.paused:
             if d.playing:
                 d.device.play()
@@ -195,7 +196,7 @@ class App(QMainWindow):
 
     def on_stop_click(self):
         i = self.combo_box.currentIndex()
-        d = self.device_list[i]
+        d = self.get_device_from_index(i)
         d.device.stop()
         self.stop_timer.emit(i)
         d.time = QTime(0, 0, 0)
@@ -236,10 +237,12 @@ class App(QMainWindow):
 
     def on_skip_click(self):
         i = self.combo_box.currentIndex()
-        self.device_list[i].device.seek(self.device_list[i].duration - 3)
+        d = self.get_device_from_index(i)
+        d.device.seek(d.duration - 3)
 
     def on_dial_moved(self):
-        d = self.device_list[self.combo_box.currentIndex()]
+        i = self.combo_box.currentIndex()
+        d = self.get_device_from_index(i)
         if not self.volume_status_event_pending:
             self.volume_status_event_pending = True
             d.device.volume(self.dial.value() / 100)
@@ -250,11 +253,14 @@ class App(QMainWindow):
             d.device.volume(1.0)
 
     def on_progress_pressed(self):
-        self.device_list[self.combo_box.currentIndex()].progress_timer.stop()
+        i = self.combo_box.currentIndex()
+        d = self.get_device_from_index(i)
+        d.progress_timer.stop()
         self.current_progress = self.progress_slider.value()
 
     def on_progress_released(self):
-        d = self.device_list[self.combo_box.currentIndex()]
+        i = self.combo_box.currentIndex()
+        d = self.get_device_from_index(i)
         value = self.progress_slider.value()
         if d.media_listener.supports_seek:
             if value > self.current_progress:
@@ -265,14 +271,17 @@ class App(QMainWindow):
             print("Stream does not support seeking")
 
     def on_start_timer(self, i):
-        self.device_list[i].progress_timer.start(1000)
+        d = self.get_device_from_index(i)
+        d.progress_timer.start(1000)
 
     def on_stop_timer(self, i):
-        self.device_list[i].progress_timer.stop()
-        self.device_list[i].time.setHMS(0, 0, 0)
+        d = self.get_device_from_index(i)
+        d.progress_timer.stop()
+        d.time.setHMS(0, 0, 0)
 
     def set_time(self, i, h, m, s):
-        self.device_list[i].time.setHMS(h, m, s)
+        d = self.get_device_from_index(i)
+        d.time.setHMS(h, m, s)
 
     def set_icon(self, button, icon):
         button.setIcon(app.style().standardIcon(getattr(QStyle, icon)))
@@ -354,7 +363,7 @@ class MediaListener:
             return
         self.supports_seek = status.supports_seek
         if i != index:
-            d = _self.device_list[index]
+            d = _self.get_device_from_index(index)
             d.duration = status.duration
             if status.player_state == "PLAYING":
                 hours, minutes, seconds = self.split_seconds(int(status.current_time))
@@ -377,7 +386,7 @@ class MediaListener:
                 d.paused = True
                 d.live = False
             return
-        d = _self.device_list[i]
+        d = _self.get_device_from_index(i)
         d.duration = status.duration
         if status.player_state == "PLAYING":
             if status.duration != None:
@@ -439,12 +448,12 @@ class StatusListener:
         if index == -1:
             return
         v = status.volume_level * 100
-        d = _self.device_list[index]
+        d = _self.get_device_from_index(index)
         if i != index:
             d.volume = v
             d.status_text = status.status_text
             return
-        d = _self.device_list[i]
+        d = _self.get_device_from_index(i)
         d.volume = v
         d.status_text = status.status_text
         _self.status_label.setText(status.status_text)
