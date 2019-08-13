@@ -270,7 +270,7 @@ class App(QMainWindow):
         self.dial.valueChanged.disconnect(self.on_dial_moved)
         self.dial.setValue(d.volume)
         self.dial.valueChanged.connect(self.on_dial_moved)
-        self.set_text(d)
+        self.update_text(d)
 
     def on_skip_click(self):
         i = self.combo_box.currentIndex()
@@ -419,7 +419,7 @@ class App(QMainWindow):
                 return True
         return False
 
-    def set_text(self, d):
+    def update_text(self, d):
         prefix = ""
         if d.live:
             prefix = "Streaming"
@@ -499,14 +499,14 @@ class MediaListener:
             _self.progress_slider.setEnabled(True)
             d.paused = False
             d.playing = True
-            _self.set_text(d)
+            _self.update_text(d)
             _self.set_icon(_self.play_button, "SP_MediaPause")
             _self.progress_label.setText(d.time.toString("hh:mm:ss"))
             _self.start_timer.emit(i)
             if status.stream_type == "LIVE":
                 d.live = True
                 d.status_text = d.title = ""
-                _self.set_text(d)
+                _self.update_text(d)
                 _self.stop_timer.emit(i)
                 d.time.setHMS(0, 0, 0)
                 _self.skip_forward_button.setEnabled(False)
@@ -524,7 +524,7 @@ class MediaListener:
             _self.stop_timer.emit(i)
             d.paused = True
             d.playing = True
-            _self.set_text(d)
+            _self.update_text(d)
             _self.set_icon(_self.play_button, "SP_MediaPlay")
             _self.progress_label.setText(d.time.toString("hh:mm:ss"))
         elif status.player_state == "IDLE" or status.player_state == "UNKNOWN":
@@ -571,7 +571,7 @@ class StatusListener:
         if status.status_text:
             d.status_text = status.status_text
         if d.playing:
-            _self.set_text(d)
+            _self.update_text(d)
         if not _self.volume_status_event_pending:
             _self.dial.valueChanged.disconnect(_self.on_dial_moved)
             _self.dial.setValue(v)
