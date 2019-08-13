@@ -47,10 +47,7 @@ class Device:
         self.playing = False
         self.stopping = False
         self.rebooting = False
-        self.reboot_armed = True
         self.progress_clicked = False
-        self.stop_button_clicked = False
-        self.reboot_button_clicked = False
         self.progress_timer = QTimer()
         self.time = QTime(0, 0, 0)
         self.progress_timer.timeout.connect(self.on_progress_tick)
@@ -161,6 +158,7 @@ class App(QMainWindow):
         self.stop_timer.connect(self.on_stop_timer)
         self.add_device.connect(self.on_add_device)
         self.remove_device.connect(self.on_remove_device)
+        self.textbox_return = False
         self.device_list = []
         if num_devices > 1:
             text = "devices found"
@@ -193,6 +191,19 @@ class App(QMainWindow):
         self.setCentralWidget(self.widget)
         self.show()
 
+    def play(self, d, text):
+        self.set_icon(self.play_button, "SP_MediaPause")
+        self.status_label.setText("Playing..")
+        self.status_label.repaint()
+        self.status_label.update()
+        try:
+            d.device.stop()
+            d.cast.wait()
+            d.device.play_url(text, resolve=True, block=False)
+        except Exception as e:
+            self.status_label.setText(str(e))
+            print(e)
+
     def on_play_click(self):
         i = self.combo_box.currentIndex()
         d = self.get_device_from_index(i)
@@ -204,25 +215,22 @@ class App(QMainWindow):
                 self.set_icon(self.play_button, "SP_MediaPause")
                 d.paused = False
                 return
-            text = self.textbox.text()
             if "://" in text:
-                self.set_icon(self.play_button, "SP_MediaPause")
-                self.status_label.setText("Playing..")
-                self.status_label.repaint()
-                self.status_label.update()
-                d.reboot_armed = False
-                try:
-                    d.device.play_url(text, resolve=True, block=False)
-                except Exception as e:
-                    self.status_label.setText(str(e))
-                    print(e)
+                text = self.textbox.text()
+                self.play(d, text)
         elif d.playing:
+            if self.textbox_return:
+                text = self.textbox.text()
+                self.textbox_return = False
+                self.play(d, text)
+                return
             self.set_icon(self.play_button, "SP_MediaPlay")
             d.device.pause()
             d.paused = True
             d.progress_timer.stop()
 
     def on_textbox_return(self):
+        self.textbox_return = True
         self.on_play_click()
 
     def on_stopping_timeout(self):
@@ -230,8 +238,6 @@ class App(QMainWindow):
         d = self.get_device_from_index(i)
         if d == None:
             return
-        d.reboot_armed = True
-        d.stop_button_clicked = False
         d.stopping = False
         self.update_text(d)
 
@@ -243,21 +249,6 @@ class App(QMainWindow):
         d.status_text = d.title = ""
         self.status_label.setText(text)
         self.status_label.update()
-        if text == "Stopping..":
-            d.reboot_armed = False
-            d.stop_button_clicked = True
-            d.stopping = True
-            QTimer.singleShot(3000, self.on_stopping_timeout)
-            d.device.stop()
-        if text == "Rebooting..":
-            print("Rebooting", d.device.name)
-            self.play_button.setEnabled(False)
-            self.stop_button.setEnabled(False)
-            self.reboot_button.setEnabled(False)
-            d.reboot_button_clicked = True
-            d.reboot_armed = False
-            d.rebooting = True
-            d.cast.reboot()
         self.stop_timer.emit(i)
         d.time.setHMS(0, 0, 0)
         self.set_progress(0)
@@ -268,6 +259,17 @@ class App(QMainWindow):
         d.playing = False
         d.paused = True
         d.live = False
+        if text == "Stopping..":
+            QTimer.singleShot(3000, self.on_stopping_timeout)
+            d.stopping = True
+            d.device.stop()
+        if text == "Rebooting..":
+            print(d.device.name, "rebooting")
+            self.play_button.setEnabled(False)
+            self.stop_button.setEnabled(False)
+            self.reboot_button.setEnabled(False)
+            d.rebooting = True
+            d.cast.reboot()
 
     def on_stop_click(self):
         self.stop("Stopping..")
@@ -396,18 +398,18 @@ class App(QMainWindow):
                 self.devices.remove(d.device)
                 self.device_list.remove(d)
                 break
-        self.play_button.setEnabled(True)
-        self.stop_button.setEnabled(True)
-        self.reboot_button.setEnabled(True)
         d = CattDevice(ip_addr=ip)
         d._cast.wait()
         device = Device(self, d, d._cast, self.combo_box.count())
         d._cast.media_controller.register_status_listener(device.media_listener)
         d._cast.register_status_listener(device.status_listener)
-        device.reboot_armed = False
         self.devices.append(d)
         self.device_list.append(device)
         self.combo_box.addItem(d.name)
+        if self.combo_box.currentIndex() == device.index:
+            self.play_button.setEnabled(True)
+            self.stop_button.setEnabled(True)
+            self.reboot_button.setEnabled(True)
         d.volume(REBOOT_VOLUME)
 
     def on_remove_device(self, ip):
@@ -537,8 +539,6 @@ class MediaListener:
                 d.playing = False
                 d.paused = True
                 d.live = False
-                if not d.stop_button_clicked:
-                    d.reboot_armed = True
             return
         d = _self.get_device_from_index(i)
         if d == None:
@@ -593,13 +593,11 @@ class MediaListener:
             _self.progress_slider.setEnabled(False)
             _self.progress_label.setText(d.time.toString("hh:mm:ss"))
             _self.set_icon(_self.play_button, "SP_MediaPlay")
-            if not d.rebooting:
+            if not d.rebooting and not d.live:
                 _self.play_button.setEnabled(True)
             d.playing = False
             d.paused = True
             d.live = False
-            if not d.stop_button_clicked:
-                d.reboot_armed = True
             _self.update_text(d)
 
     def split_seconds(self, s):
@@ -620,67 +618,22 @@ class StatusListener:
         d = _self.get_device_from_index(index)
         if d == None:
             return
-        reboot_status = self.get_reboot_status(d, status)
         if i != index:
             d.volume = v
             if status.status_text:
                 d.status_text = status.status_text
-            if reboot_status:
-                d.playing = False
-                d.paused = True
-                d.live = False
-                d.rebooting = True
-            else:
-                d.rebooting = False
             return
         d = _self.get_device_from_index(i)
         if d == None:
             return
-        reboot_status = self.get_reboot_status(d, status)
         d.volume = v
         if status.status_text:
             d.status_text = status.status_text
-        if reboot_status:
-            d.playing = False
-            d.paused = True
-            d.live = False
-            if not d.rebooting:
-                _self.stop("Rebooting..")
-            d.rebooting = True
-            _self.play_button.setEnabled(False)
-            _self.stop_button.setEnabled(False)
-            _self.reboot_button.setEnabled(False)
-        elif not d.reboot_button_clicked:
-            d.rebooting = False
-            if not d.live:
-                _self.play_button.setEnabled(True)
-            _self.stop_button.setEnabled(True)
-            _self.reboot_button.setEnabled(True)
-            d.stop_button_clicked = False
-        _self.update_text(d)
         if not _self.volume_status_event_pending:
             _self.dial.valueChanged.disconnect(_self.on_dial_moved)
             _self.dial.setValue(v)
             _self.dial.valueChanged.connect(_self.on_dial_moved)
         _self.volume_status_event_pending = False
-
-    def get_reboot_status(self, d, status):
-        if d.reboot_button_clicked:
-            reboot_status = True
-            d.reboot_armed = False
-        else:
-            # We assume this combination of status
-            # values means the device is rebooting
-            reboot_status = (
-                status.app_id == None
-                and status.display_name == None
-                and len(status.namespaces) == 0
-                and status.session_id == None
-                and status.transport_id == None
-                and status.status_text == ""
-                and d.reboot_armed
-            )
-        return reboot_status
 
 
 class ConnectionListener:
