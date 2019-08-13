@@ -586,6 +586,9 @@ class StatusListener:
             if status.status_text:
                 d.status_text = status.status_text
             if reboot_status:
+                d.playing = False
+                d.paused = True
+                d.live = False
                 d.rebooting = True
             else:
                 d.rebooting = False
@@ -597,8 +600,10 @@ class StatusListener:
         if status.status_text:
             d.status_text = status.status_text
         if reboot_status:
+            d.playing = False
+            d.paused = True
+            d.live = False
             d.rebooting = True
-            _self.status_label.setText("Rebooting..")
         else:
             d.rebooting = False
         _self.update_text(d)
