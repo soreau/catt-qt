@@ -513,7 +513,8 @@ class MediaListener:
             if d == None:
                 return
             d.duration = status.duration
-            d.reboot_button_clicked = False
+            d.stopping = False
+            d.rebooting = False
             if status.title:
                 d.title = status.title
             if status.player_state == "PLAYING":
@@ -544,7 +545,8 @@ class MediaListener:
         if d == None:
             return
         d.duration = status.duration
-        d.reboot_button_clicked = False
+        d.stopping = False
+        d.rebooting = False
         if status.title:
             d.title = status.title
         if status.player_state == "PLAYING":
