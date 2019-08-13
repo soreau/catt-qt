@@ -542,8 +542,7 @@ class MediaListener:
             d.duration = status.duration
             d.stopping = False
             d.rebooting = False
-            if status.title:
-                d.title = status.title
+            d.title = status.title
             if status.player_state == "PLAYING":
                 hours, minutes, seconds = _self.split_seconds(int(status.current_time))
                 _self.set_time(index, hours, minutes, seconds)
@@ -576,10 +575,10 @@ class MediaListener:
             return
         d.duration = status.duration
         d.stopping = False
+        d.rebooting = False
+        d.title = status.title
         if d.stopping_timer:
             _self.stopping_timer_cancel.emit(i)
-        if status.title:
-            d.title = status.title
         if status.player_state == "PLAYING":
             if status.duration != None:
                 _self.progress_slider.setMaximum(status.duration)
@@ -633,7 +632,6 @@ class MediaListener:
             d.live = False
             d.error = ""
             _self.update_text(d)
-        d.rebooting = False
 
 
 class StatusListener:
@@ -649,15 +647,13 @@ class StatusListener:
             return
         if i != index:
             d.volume = v
-            if status.status_text:
-                d.status_text = status.status_text
+            d.status_text = status.status_text
             return
         d = _self.get_device_from_index(i)
         if d == None:
             return
         d.volume = v
-        if status.status_text:
-            d.status_text = status.status_text
+        d.status_text = status.status_text
         if not _self.volume_status_event_pending:
             _self.dial.valueChanged.disconnect(_self.on_dial_moved)
             _self.dial.setValue(v)
