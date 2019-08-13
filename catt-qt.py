@@ -240,7 +240,7 @@ class App(QMainWindow):
             return
         d.status_text = d.title = ""
         self.status_label.setText(text)
-        self.status_label.repaint()
+        self.status_label.update()
         if text == "Stopping..":
             d.reboot_armed = False
             d.stop_button_clicked = True
@@ -327,7 +327,7 @@ class App(QMainWindow):
 
     def seek(self, d, value):
         self.status_label.setText("Seeking..")
-        self.status_label.repaint()
+        self.status_label.update()
         d.device.seek(value)
 
     def on_progress_value_changed(self):
@@ -484,7 +484,7 @@ class App(QMainWindow):
             self.status_label.setText(prefix + d.title)
         else:
             self.status_label.setText(prefix)
-        self.status_label.repaint()
+        self.status_label.update()
 
     def set_progress(self, v):
         self.progress_slider.valueChanged.disconnect(self.on_progress_value_changed)
@@ -551,7 +551,6 @@ class MediaListener:
             _self.progress_slider.setEnabled(True)
             d.paused = False
             d.playing = True
-            _self.update_text(d)
             _self.set_icon(_self.play_button, "SP_MediaPause")
             _self.progress_label.setText(d.time.toString("hh:mm:ss"))
             _self.start_timer.emit(i)
@@ -565,6 +564,7 @@ class MediaListener:
                 _self.progress_slider.setEnabled(False)
                 _self.play_button.setEnabled(False)
                 _self.progress_label.setText("LIVE")
+            _self.update_text(d)
         elif status.player_state == "PAUSED":
             if status.duration != None:
                 _self.progress_slider.setMaximum(status.duration)
