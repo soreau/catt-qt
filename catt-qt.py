@@ -571,18 +571,21 @@ class StatusListener:
         d = _self.get_device_from_index(index)
         if d == None:
             return
+        # We assume this combination of status
+        # values means the device is rebooting
+        reboot_status = (
+            status.app_id == None
+            and status.display_name == None
+            and len(status.namespaces) == 0
+            and status.session_id == None
+            and status.transport_id == None
+            and status.status_text == ""
+        )
         if i != index:
             d.volume = v
             if status.status_text:
                 d.status_text = status.status_text
-            if (
-                status.app_id == None
-                and status.display_name == None
-                and len(status.namespaces) == 0
-                and status.session_id == None
-                and status.transport_id == None
-                and status.status_text == ""
-            ):
+            if reboot_status:
                 d.rebooting = True
             else:
                 d.rebooting = False
@@ -593,14 +596,7 @@ class StatusListener:
         d.volume = v
         if status.status_text:
             d.status_text = status.status_text
-        if (
-            status.app_id == None
-            and status.display_name == None
-            and len(status.namespaces) == 0
-            and status.session_id == None
-            and status.transport_id == None
-            and status.status_text == ""
-        ):
+        if reboot_status:
             d.rebooting = True
             _self.status_label.setText("Rebooting..")
         else:
