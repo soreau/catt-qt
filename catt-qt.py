@@ -442,7 +442,7 @@ class App(QMainWindow):
                 d.stopping = d.rebooting = False
                 self.status_label.setText("Idle")
             elif d.stopping:
-                self.status_label.setText("Stopping..")
+                d.stopping = False
             elif d.rebooting:
                 self.status_label.setText("Rebooting..")
             return
