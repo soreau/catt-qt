@@ -228,6 +228,8 @@ class App(QMainWindow):
         d = self.get_device_from_index(i)
         if d == None:
             return
+        d.reboot_armed = True
+        d.stop_button_clicked = False
         d.stopping = False
         self.update_text(d)
 
