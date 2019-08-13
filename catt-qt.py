@@ -248,10 +248,12 @@ class App(QMainWindow):
             QTimer.singleShot(3000, self.on_stopping_timeout)
             d.device.stop()
         if text == "Rebooting..":
+            print("Rebooting ", d.device.name)
             self.play_button.setEnabled(False)
             self.stop_button.setEnabled(False)
             self.reboot_button.setEnabled(False)
             d.reboot_button_clicked = True
+            d.reboot_armed = False
             d.rebooting = True
             d.cast.reboot()
         self.stop_timer.emit(i)
@@ -391,12 +393,12 @@ class App(QMainWindow):
         self.play_button.setEnabled(True)
         self.stop_button.setEnabled(True)
         self.reboot_button.setEnabled(True)
-        d.reboot_button_clicked = False
         d = CattDevice(ip_addr=ip)
         d._cast.wait()
         device = Device(self, d, d._cast, self.combo_box.count())
         d._cast.media_controller.register_status_listener(device.media_listener)
         d._cast.register_status_listener(device.status_listener)
+        device.reboot_armed = False
         self.devices.append(d)
         self.device_list.append(device)
         self.combo_box.addItem(d.name)
@@ -423,16 +425,28 @@ class App(QMainWindow):
         d.live = False
         self.combo_box.clear()
         i = 0
+        j = 0
+        devices_active = False
+        lost_devices = ""
         for _d in self.device_list:
-            if d != _d and _d.index != -1:
+            if d == _d or _d.index == -1:
+                _d.media_listener.index = _d.status_listener.index = _d.index = -1
+                if j == len(self.device_list) - 1:
+                    lost_devices = lost_devices + " and "
+                elif j != 0:
+                    lost_devices = lost_devices + ", "
+                lost_devices = lost_devices + "'" + _d.device.name + "'"
+            else:
                 self.combo_box.addItem(_d.device.name)
                 _d.media_listener.index = _d.status_listener.index = _d.index = i
                 if i == 0:
                     self.update_text(_d)
                 i = i + 1
-            else:
-                _d.media_listener.index = _d.status_listener.index = _d.index = -1
+                devices_active = True
+            j = j + 1
         self.on_index_changed()
+        if not devices_active:
+            self.status_label.setText("Listening for " + lost_devices)
 
     def get_device_from_ip(self, ip):
         for d in self.device_list:
