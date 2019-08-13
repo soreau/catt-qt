@@ -220,13 +220,14 @@ class App(QMainWindow):
         d = self.get_device_from_index(i)
         if d == None:
             return
-        d.stopping = True
         d.status_text = d.title = ""
         self.status_label.setText(text)
         self.status_label.repaint()
         if text == "Stopping..":
+            d.stopping = True
             d.device.stop()
         if text == "Rebooting..":
+            d.rebooting = True
             d.cast.reboot()
         self.stop_timer.emit(i)
         d.time.setHMS(0, 0, 0)
@@ -270,9 +271,10 @@ class App(QMainWindow):
             if d.duration != None:
                 self.progress_slider.setMaximum(d.duration)
             self.set_progress(time_to_seconds(d.time))
-            self.play_button.setEnabled(True)
-            self.stop_button.setEnabled(True)
-            self.reboot_button.setEnabled(True)
+            enabled = not d.rebooting
+            self.play_button.setEnabled(enabled)
+            self.stop_button.setEnabled(enabled)
+            self.reboot_button.setEnabled(enabled)
         self.dial.valueChanged.disconnect(self.on_dial_moved)
         self.dial.setValue(d.volume)
         self.dial.valueChanged.connect(self.on_dial_moved)
@@ -573,6 +575,17 @@ class StatusListener:
             d.volume = v
             if status.status_text:
                 d.status_text = status.status_text
+            if (
+                status.app_id == None
+                and status.display_name == None
+                and len(status.namespaces) == 0
+                and status.session_id == None
+                and status.transport_id == None
+                and status.status_text == ""
+            ):
+                d.rebooting = True
+            else:
+                d.rebooting = False
             return
         d = _self.get_device_from_index(i)
         if d == None:
@@ -580,6 +593,18 @@ class StatusListener:
         d.volume = v
         if status.status_text:
             d.status_text = status.status_text
+        if (
+            status.app_id == None
+            and status.display_name == None
+            and len(status.namespaces) == 0
+            and status.session_id == None
+            and status.transport_id == None
+            and status.status_text == ""
+        ):
+            d.rebooting = True
+            _self.status_label.setText("Rebooting..")
+        else:
+            d.rebooting = False
         _self.update_text(d)
         if not _self.volume_status_event_pending:
             _self.dial.valueChanged.disconnect(_self.on_dial_moved)
