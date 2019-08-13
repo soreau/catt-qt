@@ -81,6 +81,7 @@ class App(QMainWindow):
         self.volume_event_timer.timeout.connect(self.event_pending_expired)
         self.volume_event_timer.setSingleShot(True)
         self.textbox = QLineEdit()
+        self.textbox.returnPressed.connect(self.on_textbox_return)
         self.play_button = QPushButton()
         self.play_button.clicked.connect(self.on_play_click)
         self.set_icon(self.play_button, "SP_MediaPlay")
@@ -208,6 +209,9 @@ class App(QMainWindow):
             d.device.pause()
             d.paused = True
             d.progress_timer.stop()
+
+    def on_textbox_return(self):
+        self.on_play_click()
 
     def on_stop_click(self):
         i = self.combo_box.currentIndex()
