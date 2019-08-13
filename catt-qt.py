@@ -478,7 +478,7 @@ class MediaListener:
                 d.playing = True
             elif status.player_state == "IDLE" or status.player_state == "UNKNOWN":
                 _self.stop_timer.emit(index)
-                d.status_text = d.title = ""
+                d.title = ""
                 d.time.setHMS(0, 0, 0)
                 d.playing = False
                 d.paused = True
@@ -540,7 +540,7 @@ class MediaListener:
             d.playing = False
             d.paused = True
             d.live = False
-            d.status_text = d.title = ""
+            d.title = ""
             _self.set_text(d)
 
     def split_seconds(self, s):
