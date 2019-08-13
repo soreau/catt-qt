@@ -24,7 +24,7 @@ def time_to_seconds(time):
 
 
 class Device:
-    def __init__(self, s, d, c, i=0):
+    def __init__(self, s, d, c, i):
         self.media_listener = MediaListener()
         self.media_listener._self = s
         self.media_listener.supports_seek = False
