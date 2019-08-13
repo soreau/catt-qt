@@ -478,7 +478,6 @@ class MediaListener:
                 d.playing = True
             elif status.player_state == "IDLE" or status.player_state == "UNKNOWN":
                 _self.stop_timer.emit(index)
-                d.title = ""
                 d.time.setHMS(0, 0, 0)
                 d.playing = False
                 d.paused = True
@@ -540,8 +539,7 @@ class MediaListener:
             d.playing = False
             d.paused = True
             d.live = False
-            d.title = ""
-            _self.set_text(d)
+            _self.status_label.setText("Idle")
 
     def split_seconds(self, s):
         hours = s // 3600
@@ -572,7 +570,8 @@ class StatusListener:
         d.volume = v
         if status.status_text:
             d.status_text = status.status_text
-        _self.set_text(d)
+        if d.playing:
+            _self.set_text(d)
         if not _self.volume_status_event_pending:
             _self.dial.valueChanged.disconnect(_self.on_dial_moved)
             _self.dial.setValue(v)
