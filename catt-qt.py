@@ -480,7 +480,6 @@ class App(QMainWindow):
 
 class MediaListener:
     def new_media_status(self, status):
-        print(status)
         _self = self._self
         i = _self.combo_box.currentIndex()
         index = self.index
