@@ -199,8 +199,7 @@ class App(QMainWindow):
             text = self.textbox.text()
             if "://" in text:
                 self.set_icon(self.play_button, "SP_MediaPause")
-                d.status_text = "Playing.."
-                self.status_label.setText(d.status_text)
+                self.status_label.setText("Playing..")
                 self.status_label.repaint()
                 d.device.play_url(text, resolve=True, block=False)
         elif d.playing:
@@ -214,8 +213,7 @@ class App(QMainWindow):
         d = self.get_device_from_index(i)
         if d == None:
             return
-        d.status_text = "Stopping.."
-        self.status_label.setText(d.status_text)
+        self.status_label.setText("Stopping..")
         self.status_label.repaint()
         d.device.stop()
         self.stop_timer.emit(i)
@@ -232,8 +230,7 @@ class App(QMainWindow):
     def on_reboot_click(self):
         i = self.combo_box.currentIndex()
         d = self.get_device_from_index(i)
-        d.status_text = "Rebooting.."
-        self.status_label.setText(d.status_text)
+        self.status_label.setText("Rebooting..")
         self.status_label.repaint()
         d.cast.reboot()
 
@@ -296,8 +293,7 @@ class App(QMainWindow):
             d.device.volume(1.0)
 
     def seek(self, d, value):
-        d.status_text = "Seeking.."
-        self.status_label.setText(d.status_text)
+        self.status_label.setText("Seeking..")
         self.status_label.repaint()
         d.device.seek(value)
 
