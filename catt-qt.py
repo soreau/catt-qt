@@ -48,6 +48,7 @@ class Device:
         self.stopping = False
         self.rebooting = False
         self.reboot_armed = True
+        self.progress_clicked = False
         self.stop_button_clicked = False
         self.reboot_button_clicked = False
         self.progress_timer = QTimer()
@@ -208,6 +209,7 @@ class App(QMainWindow):
                 self.set_icon(self.play_button, "SP_MediaPause")
                 self.status_label.setText("Playing..")
                 self.status_label.repaint()
+                self.status_label.update()
                 d.reboot_armed = False
                 try:
                     d.device.play_url(text, resolve=True, block=False)
@@ -333,6 +335,8 @@ class App(QMainWindow):
     def on_progress_value_changed(self):
         i = self.combo_box.currentIndex()
         d = self.get_device_from_index(i)
+        if d.progress_clicked:
+            return
         if d.media_listener.supports_seek:
             v = self.progress_slider.value()
             self.stop_timer.emit(i)
@@ -344,6 +348,7 @@ class App(QMainWindow):
         if d == None:
             return
         d.progress_timer.stop()
+        d.progress_clicked = True
         self.current_progress = self.progress_slider.value()
 
     def on_progress_released(self):
@@ -352,6 +357,7 @@ class App(QMainWindow):
         if d == None:
             return
         value = self.progress_slider.value()
+        d.progress_clicked = False
         if d.media_listener.supports_seek:
             if value > self.current_progress:
                 self.seek(d, value)
