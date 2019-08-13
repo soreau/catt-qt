@@ -215,8 +215,8 @@ class App(QMainWindow):
                 self.set_icon(self.play_button, "SP_MediaPause")
                 d.paused = False
                 return
+            text = self.textbox.text()
             if "://" in text:
-                text = self.textbox.text()
                 self.play(d, text)
         elif d.playing:
             if self.textbox_return:
