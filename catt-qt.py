@@ -424,7 +424,8 @@ class App(QMainWindow):
         if d.live:
             prefix = "Streaming"
         elif not d.playing:
-            prefix = "Idle"
+            self.status_label.setText("Idle")
+            return
         elif d.paused:
             prefix = "Paused"
         if prefix and (d.status_text or d.title):
@@ -539,7 +540,7 @@ class MediaListener:
             d.playing = False
             d.paused = True
             d.live = False
-            _self.status_label.setText("Idle")
+            _self.update_text(d)
 
     def split_seconds(self, s):
         hours = s // 3600
@@ -570,8 +571,7 @@ class StatusListener:
         d.volume = v
         if status.status_text:
             d.status_text = status.status_text
-        if d.playing:
-            _self.update_text(d)
+        _self.update_text(d)
         if not _self.volume_status_event_pending:
             _self.dial.valueChanged.disconnect(_self.on_dial_moved)
             _self.dial.setValue(v)
