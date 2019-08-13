@@ -54,7 +54,7 @@ class Device:
         self.time = self.time.addSecs(1)
         if _self.combo_box.currentIndex() == self.index:
             _self.progress_label.setText(self.time.toString("hh:mm:ss"))
-            _self.progress_slider.setValue(time_to_seconds(self.time))
+            _self.set_progress(time_to_seconds(self.time))
 
 
 class App(QMainWindow):
@@ -104,10 +104,11 @@ class App(QMainWindow):
         self.progress_label = QLabel()
         self.progress_label.setText("00:00:00")
         self.progress_slider = QSlider(Qt.Horizontal)
-        self.progress_slider.setValue(0)
         self.progress_slider.setEnabled(False)
+        self.progress_slider.valueChanged.connect(self.on_progress_value_changed)
         self.progress_slider.sliderPressed.connect(self.on_progress_pressed)
         self.progress_slider.sliderReleased.connect(self.on_progress_released)
+        self.set_progress(0)
         self.skip_forward_button = QPushButton()
         self.set_icon(self.skip_forward_button, "SP_MediaSkipForward")
         self.skip_forward_button.setToolTip("Skip")
@@ -218,7 +219,7 @@ class App(QMainWindow):
         d.device.stop()
         self.stop_timer.emit(i)
         d.time.setHMS(0, 0, 0)
-        self.progress_slider.setValue(0)
+        self.set_progress(0)
         self.progress_label.setText(d.time.toString("hh:mm:ss"))
         self.set_icon(self.play_button, "SP_MediaPlay")
         self.skip_forward_button.setEnabled(False)
@@ -263,7 +264,7 @@ class App(QMainWindow):
             self.progress_label.setText(d.time.toString("hh:mm:ss"))
             if d.duration != None:
                 self.progress_slider.setMaximum(d.duration)
-            self.progress_slider.setValue(time_to_seconds(d.time))
+            self.set_progress(time_to_seconds(d.time))
             self.play_button.setEnabled(True)
             self.stop_button.setEnabled(True)
         self.dial.valueChanged.disconnect(self.on_dial_moved)
@@ -296,6 +297,14 @@ class App(QMainWindow):
         self.status_label.setText("Seeking..")
         self.status_label.repaint()
         d.device.seek(value)
+
+    def on_progress_value_changed(self):
+        i = self.combo_box.currentIndex()
+        d = self.get_device_from_index(i)
+        if d.media_listener.supports_seek:
+            v = self.progress_slider.value()
+            self.stop_timer.emit(i)
+            self.seek(d, v)
 
     def on_progress_pressed(self):
         i = self.combo_box.currentIndex()
@@ -429,6 +438,11 @@ class App(QMainWindow):
         else:
             self.status_label.setText(prefix)
 
+    def set_progress(self, v):
+        self.progress_slider.valueChanged.disconnect(self.on_progress_value_changed)
+        self.progress_slider.setValue(v)
+        self.progress_slider.valueChanged.connect(self.on_progress_value_changed)
+
 
 class MediaListener:
     def new_media_status(self, status):
@@ -478,7 +492,7 @@ class MediaListener:
         if status.player_state == "PLAYING":
             if status.duration != None:
                 _self.progress_slider.setMaximum(status.duration)
-            _self.progress_slider.setValue(status.current_time)
+            _self.set_progress(status.current_time)
             hours, minutes, seconds = self.split_seconds(int(status.current_time))
             _self.set_time(i, hours, minutes, seconds)
             _self.skip_forward_button.setEnabled(True)
@@ -502,7 +516,7 @@ class MediaListener:
         elif status.player_state == "PAUSED":
             if status.duration != None:
                 _self.progress_slider.setMaximum(status.duration)
-            _self.progress_slider.setValue(status.current_time)
+            _self.set_progress(status.current_time)
             hours, minutes, seconds = self.split_seconds(int(status.current_time))
             _self.set_time(i, hours, minutes, seconds)
             _self.skip_forward_button.setEnabled(True)
@@ -514,7 +528,7 @@ class MediaListener:
             _self.set_icon(_self.play_button, "SP_MediaPlay")
             _self.progress_label.setText(d.time.toString("hh:mm:ss"))
         elif status.player_state == "IDLE" or status.player_state == "UNKNOWN":
-            _self.progress_slider.setValue(0)
+            _self.set_progress(0)
             _self.stop_timer.emit(i)
             d.time.setHMS(0, 0, 0)
             _self.skip_forward_button.setEnabled(False)
