@@ -215,16 +215,19 @@ class App(QMainWindow):
     def on_textbox_return(self):
         self.on_play_click()
 
-    def on_stop_click(self):
+    def stop(self, text):
         i = self.combo_box.currentIndex()
         d = self.get_device_from_index(i)
         if d == None:
             return
         d.stopping = True
         d.status_text = d.title = ""
-        self.status_label.setText("Stopping..")
+        self.status_label.setText(text)
         self.status_label.repaint()
-        d.device.stop()
+        if text == "Stopping..":
+            d.device.stop()
+        if text == "Rebooting..":
+            d.cast.reboot()
         self.stop_timer.emit(i)
         d.time.setHMS(0, 0, 0)
         self.set_progress(0)
@@ -236,26 +239,16 @@ class App(QMainWindow):
         d.paused = True
         d.live = False
 
+    def on_stop_click(self):
+        self.stop("Stopping..")
+
     def on_reboot_click(self):
-        i = self.combo_box.currentIndex()
-        d = self.get_device_from_index(i)
-        if d == None:
-            return
-        d.rebooting = True
-        d.status_text = d.title = ""
-        self.status_label.setText("Rebooting..")
-        self.status_label.repaint()
-        d.cast.reboot()
+        self.stop("Rebooting..")
+        self.play_button.setEnabled(False)
+        self.stop_button.setEnabled(False)
+        self.reboot_button.setEnabled(False)
 
     def on_index_changed(self):
-        if not self.active_devices():
-            self.play_button.setEnabled(False)
-            self.stop_button.setEnabled(False)
-            self.progress_slider.setEnabled(False)
-            self.skip_forward_button.setEnabled(False)
-            self.set_icon(self.play_button, "SP_MediaPlay")
-            self.progress_label.setText("00:00:00")
-            return
         i = self.combo_box.currentIndex()
         d = self.get_device_from_index(i)
         if d == None:
@@ -279,6 +272,7 @@ class App(QMainWindow):
             self.set_progress(time_to_seconds(d.time))
             self.play_button.setEnabled(True)
             self.stop_button.setEnabled(True)
+            self.reboot_button.setEnabled(True)
         self.dial.valueChanged.disconnect(self.on_dial_moved)
         self.dial.setValue(d.volume)
         self.dial.valueChanged.connect(self.on_dial_moved)
@@ -370,9 +364,9 @@ class App(QMainWindow):
                 self.devices.remove(d.device)
                 self.device_list.remove(d)
                 break
-        if not self.active_devices():
-            self.play_button.setEnabled(True)
-            self.stop_button.setEnabled(True)
+        self.play_button.setEnabled(True)
+        self.stop_button.setEnabled(True)
+        self.reboot_button.setEnabled(True)
         d = CattDevice(ip_addr=ip)
         d._cast.wait()
         device = Device(self, d, d._cast, self.combo_box.count())
@@ -426,12 +420,6 @@ class App(QMainWindow):
             if d.index == i:
                 return d
         return None
-
-    def active_devices(self):
-        for d in self.device_list:
-            if d.index != -1:
-                return True
-        return False
 
     def update_text(self, d):
         prefix = ""
