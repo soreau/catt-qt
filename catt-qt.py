@@ -45,6 +45,8 @@ class Device:
         self.duration = 0
         self.title = ""
         self.status_text = ""
+        self.stopping = False
+        self.rebooting = False
         self.progress_timer = QTimer()
         self.time = QTime(0, 0, 0)
         self.progress_timer.timeout.connect(self.on_progress_tick)
@@ -218,6 +220,8 @@ class App(QMainWindow):
         d = self.get_device_from_index(i)
         if d == None:
             return
+        d.stopping = True
+        d.status_text = d.title = ""
         self.status_label.setText("Stopping..")
         self.status_label.repaint()
         d.device.stop()
@@ -235,6 +239,10 @@ class App(QMainWindow):
     def on_reboot_click(self):
         i = self.combo_box.currentIndex()
         d = self.get_device_from_index(i)
+        if d == None:
+            return
+        d.rebooting = True
+        d.status_text = d.title = ""
         self.status_label.setText("Rebooting..")
         self.status_label.repaint()
         d.cast.reboot()
@@ -400,6 +408,8 @@ class App(QMainWindow):
             if d != _d and _d.index != -1:
                 self.combo_box.addItem(_d.device.name)
                 _d.media_listener.index = _d.status_listener.index = _d.index = i
+                if i == 0:
+                    self.update_text(_d)
                 i = i + 1
             else:
                 _d.media_listener.index = _d.status_listener.index = _d.index = -1
@@ -428,7 +438,13 @@ class App(QMainWindow):
         if d.live:
             prefix = "Streaming"
         elif not d.playing:
-            self.status_label.setText("Idle")
+            if not d.stopping and not d.rebooting:
+                d.stopping = d.rebooting = False
+                self.status_label.setText("Idle")
+            elif d.stopping:
+                self.status_label.setText("Stopping..")
+            elif d.rebooting:
+                self.status_label.setText("Rebooting..")
             return
         elif d.paused:
             prefix = "Paused"
