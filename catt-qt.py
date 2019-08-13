@@ -507,6 +507,7 @@ class MediaListener:
             _self.set_time(i, hours, minutes, seconds)
             _self.skip_forward_button.setEnabled(True)
             _self.progress_slider.setEnabled(True)
+            _self.stop_timer.emit(i)
             d.paused = True
             d.playing = True
             _self.set_text(d)
