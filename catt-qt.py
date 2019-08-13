@@ -40,6 +40,7 @@ class Device:
         self.volume = 0
         self.device = d
         self.duration = 0
+        self.error = ""
         self.title = ""
         self.status_text = ""
         self.live = False
@@ -47,6 +48,7 @@ class Device:
         self.playing = False
         self.stopping = False
         self.rebooting = False
+        self.stopping_timer = None
         self.progress_clicked = False
         self.progress_timer = QTimer()
         self.time = QTime(0, 0, 0)
@@ -55,6 +57,11 @@ class Device:
     def on_progress_tick(self):
         _self = self._self
         self.time = self.time.addSecs(1)
+        if self.duration and time_to_seconds(self.time) >= int(self.duration):
+            _self.stop_timer.emit(self.index)
+            if _self.combo_box.currentIndex() == self.index:
+                _self.progress_label.setText(self.time.toString("hh:mm:ss"))
+                _self.set_icon(_self.play_button, "SP_MediaPlay")
         if _self.combo_box.currentIndex() == self.index:
             _self.progress_label.setText(self.time.toString("hh:mm:ss"))
             _self.set_progress(time_to_seconds(self.time))
@@ -65,6 +72,7 @@ class App(QMainWindow):
     stop_timer = pyqtSignal(int)
     add_device = pyqtSignal(str)
     remove_device = pyqtSignal(str)
+    stopping_timer_cancel = pyqtSignal(int)
 
     def create_devices_layout(self):
         self.devices_layout = QHBoxLayout()
@@ -112,7 +120,7 @@ class App(QMainWindow):
         self.progress_slider.valueChanged.connect(self.on_progress_value_changed)
         self.progress_slider.sliderPressed.connect(self.on_progress_pressed)
         self.progress_slider.sliderReleased.connect(self.on_progress_released)
-        self.set_progress(0)
+        self.progress_slider.setValue(0)
         self.skip_forward_button = QPushButton()
         self.set_icon(self.skip_forward_button, "SP_MediaSkipForward")
         self.skip_forward_button.setToolTip("Skip")
@@ -158,6 +166,7 @@ class App(QMainWindow):
         self.stop_timer.connect(self.on_stop_timer)
         self.add_device.connect(self.on_add_device)
         self.remove_device.connect(self.on_remove_device)
+        self.stopping_timer_cancel.connect(self.on_stopping_timer_cancel)
         self.textbox_return = False
         self.device_list = []
         if num_devices > 1:
@@ -202,6 +211,7 @@ class App(QMainWindow):
             d.device.play_url(text, resolve=True, block=False)
         except Exception as e:
             self.status_label.setText(str(e))
+            d.error = str(e)
             print(e)
 
     def on_play_click(self):
@@ -219,6 +229,7 @@ class App(QMainWindow):
             if "://" in text:
                 self.play(d, text)
         elif d.playing:
+            d.error = ""
             if self.textbox_return:
                 text = self.textbox.text()
                 self.textbox_return = False
@@ -232,6 +243,14 @@ class App(QMainWindow):
     def on_textbox_return(self):
         self.textbox_return = True
         self.on_play_click()
+
+    def on_stopping_timer_cancel(self, i):
+        i = self.combo_box.currentIndex()
+        d = self.get_device_from_index(i)
+        if d == None:
+            return
+        d.stopping_timer.stop()
+        d.stopping_timer = None
 
     def on_stopping_timeout(self):
         i = self.combo_box.currentIndex()
@@ -259,8 +278,9 @@ class App(QMainWindow):
         d.playing = False
         d.paused = True
         d.live = False
+        d.error = ""
         if text == "Stopping..":
-            QTimer.singleShot(3000, self.on_stopping_timeout)
+            d.stopping_timer = QTimer.singleShot(3000, self.on_stopping_timeout)
             d.stopping = True
             d.device.stop()
         if text == "Rebooting..":
@@ -340,9 +360,10 @@ class App(QMainWindow):
         if d.progress_clicked:
             return
         if d.media_listener.supports_seek:
-            v = self.progress_slider.value()
+            v = int(self.progress_slider.value())
             self.stop_timer.emit(i)
-            self.seek(d, v)
+            if v != int(d.duration):
+                self.seek(d, v)
 
     def on_progress_pressed(self):
         i = self.combo_box.currentIndex()
@@ -361,9 +382,7 @@ class App(QMainWindow):
         value = self.progress_slider.value()
         d.progress_clicked = False
         if d.media_listener.supports_seek:
-            if value > self.current_progress:
-                self.seek(d, value)
-            elif value < self.current_progress:
+            if value > self.current_progress or value < self.current_progress:
                 self.seek(d, value)
         else:
             print("Stream does not support seeking")
@@ -470,7 +489,9 @@ class App(QMainWindow):
 
     def update_text(self, d):
         prefix = ""
-        if d.live:
+        if d.error:
+            prefix = d.error
+        elif d.live:
             prefix = "Streaming"
         elif not d.playing:
             if not d.stopping and not d.rebooting:
@@ -499,6 +520,12 @@ class App(QMainWindow):
         self.progress_slider.setValue(v)
         self.progress_slider.valueChanged.connect(self.on_progress_value_changed)
 
+    def split_seconds(self, s):
+        hours = s // 3600
+        minutes = (s - (hours * 3600)) // 60
+        seconds = s - ((hours * 3600) + (minutes * 60))
+        return hours, minutes, seconds
+
 
 class MediaListener:
     def new_media_status(self, status):
@@ -518,47 +545,52 @@ class MediaListener:
             if status.title:
                 d.title = status.title
             if status.player_state == "PLAYING":
-                hours, minutes, seconds = self.split_seconds(int(status.current_time))
+                hours, minutes, seconds = _self.split_seconds(int(status.current_time))
                 _self.set_time(index, hours, minutes, seconds)
                 _self.start_timer.emit(index)
                 d.paused = False
                 d.playing = True
+                d.error = ""
                 if status.stream_type == "LIVE":
                     d.live = True
                     d.status_text = d.title = ""
                     _self.stop_timer.emit(index)
                     d.time.setHMS(0, 0, 0)
             elif status.player_state == "PAUSED":
-                hours, minutes, seconds = self.split_seconds(int(status.current_time))
+                hours, minutes, seconds = _self.split_seconds(int(status.current_time))
                 _self.set_time(index, hours, minutes, seconds)
                 _self.stop_timer.emit(index)
                 d.paused = True
                 d.playing = True
+                d.error = ""
             elif status.player_state == "IDLE" or status.player_state == "UNKNOWN":
                 _self.stop_timer.emit(index)
                 d.time.setHMS(0, 0, 0)
                 d.playing = False
                 d.paused = True
                 d.live = False
+                d.error = ""
             return
         d = _self.get_device_from_index(i)
         if d == None:
             return
         d.duration = status.duration
         d.stopping = False
-        d.rebooting = False
+        if d.stopping_timer:
+            _self.stopping_timer_cancel.emit(i)
         if status.title:
             d.title = status.title
         if status.player_state == "PLAYING":
             if status.duration != None:
                 _self.progress_slider.setMaximum(status.duration)
             _self.set_progress(status.current_time)
-            hours, minutes, seconds = self.split_seconds(int(status.current_time))
+            hours, minutes, seconds = _self.split_seconds(int(status.current_time))
             _self.set_time(i, hours, minutes, seconds)
             _self.skip_forward_button.setEnabled(True)
             _self.progress_slider.setEnabled(True)
             d.paused = False
             d.playing = True
+            d.error = ""
             _self.set_icon(_self.play_button, "SP_MediaPause")
             _self.progress_label.setText(d.time.toString("hh:mm:ss"))
             _self.start_timer.emit(i)
@@ -577,13 +609,14 @@ class MediaListener:
             if status.duration != None:
                 _self.progress_slider.setMaximum(status.duration)
             _self.set_progress(status.current_time)
-            hours, minutes, seconds = self.split_seconds(int(status.current_time))
+            hours, minutes, seconds = _self.split_seconds(int(status.current_time))
             _self.set_time(i, hours, minutes, seconds)
             _self.skip_forward_button.setEnabled(True)
             _self.progress_slider.setEnabled(True)
             _self.stop_timer.emit(i)
             d.paused = True
             d.playing = True
+            d.error = ""
             _self.update_text(d)
             _self.set_icon(_self.play_button, "SP_MediaPlay")
             _self.progress_label.setText(d.time.toString("hh:mm:ss"))
@@ -595,18 +628,12 @@ class MediaListener:
             _self.progress_slider.setEnabled(False)
             _self.progress_label.setText(d.time.toString("hh:mm:ss"))
             _self.set_icon(_self.play_button, "SP_MediaPlay")
-            if not d.rebooting and not d.live:
-                _self.play_button.setEnabled(True)
             d.playing = False
             d.paused = True
             d.live = False
+            d.error = ""
             _self.update_text(d)
-
-    def split_seconds(self, s):
-        hours = s // 3600
-        minutes = (s - (hours * 3600)) // 60
-        seconds = s - ((hours * 3600) + (minutes * 60))
-        return hours, minutes, seconds
+        d.rebooting = False
 
 
 class StatusListener:
