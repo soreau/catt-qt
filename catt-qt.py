@@ -248,7 +248,7 @@ class App(QMainWindow):
             QTimer.singleShot(3000, self.on_stopping_timeout)
             d.device.stop()
         if text == "Rebooting..":
-            print("Rebooting ", d.device.name)
+            print("Rebooting", d.device.name)
             self.play_button.setEnabled(False)
             self.stop_button.setEnabled(False)
             self.reboot_button.setEnabled(False)
