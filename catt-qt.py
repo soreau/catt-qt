@@ -99,6 +99,24 @@ class PlayThread(QThread):
             )
 
 
+class ComboBox(QComboBox):
+    def __init__(self, s):
+        super(ComboBox, self).__init__()
+        self.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.customContextMenuRequested.connect(self.showMenu)
+        self._self = s
+
+    def showMenu(self, event):
+        menu = QMenu()
+        reboot_action = menu.addAction("Reboot", QComboBox)
+        action = menu.exec_(self.mapToGlobal(event))
+        if action == reboot_action:
+            self.reboot_device()
+
+    def reboot_device(self):
+        self._self.stop("Rebooting..")
+
+
 class App(QMainWindow):
     start_timer = pyqtSignal(int)
     stop_timer = pyqtSignal(int)
@@ -108,7 +126,7 @@ class App(QMainWindow):
 
     def create_devices_layout(self):
         self.devices_layout = QHBoxLayout()
-        self.combo_box = QComboBox()
+        self.combo_box = ComboBox(self)
         self.devices_layout.addWidget(self.combo_box)
 
     def create_control_layout(self):
@@ -138,13 +156,8 @@ class App(QMainWindow):
         self.stop_button.clicked.connect(self.on_stop_click)
         self.set_icon(self.stop_button, "SP_MediaStop")
         self.stop_button.setToolTip("Stop")
-        self.reboot_button = QPushButton()
-        self.reboot_button.clicked.connect(self.on_reboot_click)
-        self.set_icon(self.reboot_button, "SP_BrowserReload")
-        self.reboot_button.setToolTip("Reboot")
         self.control_layout.addWidget(self.play_button)
         self.control_layout.addWidget(self.stop_button)
-        self.control_layout.addWidget(self.reboot_button)
         self.control_layout.addWidget(self.textbox)
         self.volume_layout.addWidget(self.dial)
         self.volume_layout.addWidget(self.volume_label)
@@ -321,15 +334,11 @@ class App(QMainWindow):
             print(d.device.name, "rebooting")
             self.play_button.setEnabled(False)
             self.stop_button.setEnabled(False)
-            self.reboot_button.setEnabled(False)
             d.rebooting = True
             d.cast.reboot()
 
     def on_stop_click(self):
         self.stop("Stopping..")
-
-    def on_reboot_click(self):
-        self.stop("Rebooting..")
 
     def on_index_changed(self):
         i = self.combo_box.currentIndex()
@@ -356,7 +365,6 @@ class App(QMainWindow):
             enabled = not d.rebooting
             self.play_button.setEnabled(enabled)
             self.stop_button.setEnabled(enabled)
-            self.reboot_button.setEnabled(enabled)
         self.dial.valueChanged.disconnect(self.on_dial_moved)
         self.dial.setValue(d.volume)
         self.volume_label.setText(self.volume_prefix + str(int(d.volume)))
@@ -464,7 +472,6 @@ class App(QMainWindow):
         if self.combo_box.currentIndex() == device.index:
             self.play_button.setEnabled(True)
             self.stop_button.setEnabled(True)
-            self.reboot_button.setEnabled(True)
         self.volume_label.setText(self.volume_prefix + str(int(REBOOT_VOLUME * 100)))
         d.volume(REBOOT_VOLUME)
 
