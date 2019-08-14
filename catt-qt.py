@@ -9,7 +9,7 @@ from catt.api import CattDevice
 import pychromecast
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
-from PyQt5.QtCore import Qt, QTimer, QTime, pyqtSignal
+from PyQt5.QtCore import Qt, QTimer, QTime, QThread, pyqtSignal
 
 
 # On Chromecast reboot, the volume is set to maximum.
@@ -65,6 +65,15 @@ class Device:
         if _self.combo_box.currentIndex() == self.index:
             _self.progress_label.setText(self.time.toString("hh:mm:ss"))
             _self.set_progress(time_to_seconds(self.time))
+
+
+class PlayThread(QThread):
+    def __init__(self):
+        QThread.__init__(self)
+
+    # run method gets called when we start the thread
+    def run(self):
+        self.d.device.play_url(self.text, resolve=True, block=False)
 
 
 class App(QMainWindow):
@@ -166,6 +175,7 @@ class App(QMainWindow):
         self.add_device.connect(self.on_add_device)
         self.remove_device.connect(self.on_remove_device)
         self.stopping_timer_cancel.connect(self.on_stopping_timer_cancel)
+        self.play_thread = PlayThread()
         self.textbox_return = False
         self.device_list = []
         if num_devices > 1:
@@ -202,12 +212,17 @@ class App(QMainWindow):
     def play(self, d, text):
         self.set_icon(self.play_button, "SP_MediaPause")
         self.status_label.setText("Playing..")
-        self.status_label.repaint()
         self.status_label.update()
+        d.time.setHMS(0, 0, 0)
+        self.progress_label.setText(d.time.toString("hh:mm:ss"))
+        self.progress_label.repaint()
+        self.progress_label.update()
         try:
             d.device.stop()
             d.cast.wait()
-            d.device.play_url(text, resolve=True, block=False)
+            self.play_thread.d = d
+            self.play_thread.text = text
+            self.play_thread.start()
         except Exception as e:
             self.status_label.setText(str(e))
             d.error = str(e)
@@ -219,8 +234,8 @@ class App(QMainWindow):
         if d == None:
             return
         d.error = ""
-        if d.paused:
-            if d.playing:
+        if d.paused or d.live:
+            if d.playing and not d.live:
                 d.device.play()
                 self.set_icon(self.play_button, "SP_MediaPause")
                 d.paused = False
@@ -302,23 +317,23 @@ class App(QMainWindow):
         d = self.get_device_from_index(i)
         if d == None:
             return
-        if d.playing and not d.paused:
+        if d.playing and not d.paused and not d.live:
             self.set_icon(self.play_button, "SP_MediaPause")
         else:
             self.set_icon(self.play_button, "SP_MediaPlay")
         enabled = d.playing and not d.live
         self.skip_forward_button.setEnabled(enabled)
         self.progress_slider.setEnabled(enabled)
-        self.play_button.setEnabled(not d.live)
+        if d.duration != None:
+            self.progress_slider.setMaximum(d.duration)
+        self.set_progress(time_to_seconds(d.time))
         if d.live:
+            self.play_button.setEnabled(True)
             self.progress_label.setText("LIVE")
             self.stop_timer.emit(d.index)
             d.time.setHMS(0, 0, 0)
         else:
             self.progress_label.setText(d.time.toString("hh:mm:ss"))
-            if d.duration != None:
-                self.progress_slider.setMaximum(d.duration)
-            self.set_progress(time_to_seconds(d.time))
             enabled = not d.rebooting
             self.play_button.setEnabled(enabled)
             self.stop_button.setEnabled(enabled)
@@ -600,7 +615,6 @@ class MediaListener:
             d.paused = False
             d.playing = True
             d.error = ""
-            _self.set_icon(_self.play_button, "SP_MediaPause")
             _self.progress_label.setText(d.time.toString("hh:mm:ss"))
             _self.start_timer.emit(i)
             if status.stream_type == "LIVE":
@@ -611,8 +625,10 @@ class MediaListener:
                 d.time.setHMS(0, 0, 0)
                 _self.skip_forward_button.setEnabled(False)
                 _self.progress_slider.setEnabled(False)
-                _self.play_button.setEnabled(False)
                 _self.progress_label.setText("LIVE")
+                _self.set_icon(_self.play_button, "SP_MediaPlay")
+            else:
+                _self.set_icon(_self.play_button, "SP_MediaPause")
             _self.update_text(d)
         elif status.player_state == "PAUSED":
             if status.duration != None:
@@ -641,7 +657,8 @@ class MediaListener:
             d.paused = True
             d.live = False
             d.error = ""
-            _self.update_text(d)
+            if _self.status_label.text() != "Playing..":
+                _self.update_text(d)
         d.rebooting = False
 
 
