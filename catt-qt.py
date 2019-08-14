@@ -57,11 +57,20 @@ class Device:
     def on_progress_tick(self):
         _self = self._self
         self.time = self.time.addSecs(1)
-        if self.duration and time_to_seconds(self.time) >= int(self.duration):
+        if self.duration and self.duration != 0 and time_to_seconds(self.time) >= int(self.duration):
             _self.stop_timer.emit(self.index)
             if _self.combo_box.currentIndex() == self.index:
+                _self.set_progress(0)
+                self.time.setHMS(0, 0, 0)
+                _self.skip_forward_button.setEnabled(False)
+                _self.progress_slider.setEnabled(False)
                 _self.progress_label.setText(self.time.toString("hh:mm:ss"))
                 _self.set_icon(_self.play_button, "SP_MediaPlay")
+                self.playing = False
+                self.paused = True
+                self.live = False
+                self.error = ""
+                _self.update_text(self)
         if _self.combo_box.currentIndex() == self.index:
             _self.progress_label.setText(self.time.toString("hh:mm:ss"))
             _self.set_progress(time_to_seconds(self.time))
