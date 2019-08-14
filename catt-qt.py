@@ -147,6 +147,7 @@ class App(QMainWindow):
         self.volume_event_timer.timeout.connect(self.event_pending_expired)
         self.volume_event_timer.setSingleShot(True)
         self.textbox = QLineEdit()
+        self.textbox.setToolTip("File, Link or Playlist")
         self.textbox.returnPressed.connect(self.on_textbox_return)
         self.play_button = QPushButton()
         self.play_button.clicked.connect(self.on_play_click)
