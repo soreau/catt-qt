@@ -12,9 +12,7 @@ from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import Qt, QTimer, QTime, QThread, pyqtSignal
 
-# Pipe stderr to /dev/null
 devnull = open(os.devnull, "w")
-sys.stderr = devnull
 
 # On Chromecast reboot, the volume is set to maximum.
 # This value is used to set a custom initial volume
@@ -115,12 +113,17 @@ class App(QMainWindow):
 
     def create_control_layout(self):
         self.control_layout = QHBoxLayout()
+        self.volume_layout = QVBoxLayout()
         self.dial = QDial()
         self.dial.setMinimum(0)
         self.dial.setMaximum(100)
         self.dial.setValue(0)
         self.dial.valueChanged.connect(self.on_dial_moved)
         self.dial.setToolTip("Volume")
+        self.volume_prefix = "Vol: "
+        self.volume_label = QLabel()
+        self.volume_label.setText(self.volume_prefix + str(int(0)))
+        self.volume_label.setAlignment(Qt.AlignCenter)
         self.volume_status_event_pending = False
         self.volume_event_timer = QTimer()
         self.volume_event_timer.timeout.connect(self.event_pending_expired)
@@ -143,7 +146,9 @@ class App(QMainWindow):
         self.control_layout.addWidget(self.stop_button)
         self.control_layout.addWidget(self.reboot_button)
         self.control_layout.addWidget(self.textbox)
-        self.control_layout.addWidget(self.dial)
+        self.volume_layout.addWidget(self.dial)
+        self.volume_layout.addWidget(self.volume_label)
+        self.control_layout.addLayout(self.volume_layout)
 
     def create_seek_layout(self):
         self.seek_layout = QHBoxLayout()
@@ -354,6 +359,7 @@ class App(QMainWindow):
             self.reboot_button.setEnabled(enabled)
         self.dial.valueChanged.disconnect(self.on_dial_moved)
         self.dial.setValue(d.volume)
+        self.volume_label.setText(self.volume_prefix + str(int(d.volume)))
         self.dial.valueChanged.connect(self.on_dial_moved)
         self.update_text(d)
 
@@ -377,6 +383,7 @@ class App(QMainWindow):
             d.device.volume(0.0)
         elif self.dial.value() == 100:
             d.device.volume(1.0)
+        self.volume_label.setText(self.volume_prefix + str(int(self.dial.value())))
 
     def seek(self, d, value):
         self.status_label.setText("Seeking..")
@@ -458,6 +465,7 @@ class App(QMainWindow):
             self.play_button.setEnabled(True)
             self.stop_button.setEnabled(True)
             self.reboot_button.setEnabled(True)
+        self.volume_label.setText(self.volume_prefix + str(int(REBOOT_VOLUME * 100)))
         d.volume(REBOOT_VOLUME)
 
     def on_remove_device(self, ip):
@@ -699,6 +707,7 @@ class StatusListener:
         if not _self.volume_status_event_pending:
             _self.dial.valueChanged.disconnect(_self.on_dial_moved)
             _self.dial.setValue(v)
+            _self.volume_label.setText(self.volume_prefix + str(int(v)))
             _self.dial.valueChanged.connect(_self.on_dial_moved)
         _self.volume_status_event_pending = False
 
