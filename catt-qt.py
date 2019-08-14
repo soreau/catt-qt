@@ -516,9 +516,15 @@ class App(QMainWindow):
         self.status_label.update()
 
     def set_progress(self, v):
-        self.progress_slider.valueChanged.disconnect(self.on_progress_value_changed)
+        try:
+            self.progress_slider.valueChanged.disconnect(self.on_progress_value_changed)
+        except:
+            pass
         self.progress_slider.setValue(v)
-        self.progress_slider.valueChanged.connect(self.on_progress_value_changed)
+        try:
+            self.progress_slider.valueChanged.connect(self.on_progress_value_changed)
+        except:
+            pass
 
     def split_seconds(self, s):
         hours = s // 3600
