@@ -506,7 +506,12 @@ class App(QMainWindow):
         if prefix and (d.status_text or d.title):
             prefix = prefix + " - "
         if d.status_text and d.title:
-            self.status_label.setText(prefix + d.status_text + " - " + d.title)
+            if d.status_text in d.title:
+                self.status_label.setText(prefix + d.title)
+            elif d.title in d.status_text:
+                self.status_label.setText(prefix + d.status_text)
+            else:
+                self.status_label.setText(prefix + d.status_text + " - " + d.title)
         elif d.status_text:
             self.status_label.setText(prefix + d.status_text)
         elif d.title:
