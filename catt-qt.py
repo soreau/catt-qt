@@ -215,7 +215,6 @@ class App(QMainWindow):
         self.status_label.update()
         d.time.setHMS(0, 0, 0)
         self.progress_label.setText(d.time.toString("hh:mm:ss"))
-        self.progress_label.repaint()
         self.progress_label.update()
         try:
             d.device.stop()
