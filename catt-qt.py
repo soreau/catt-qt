@@ -280,6 +280,7 @@ class App(QMainWindow):
         d.error = ""
         if text == "Stopping..":
             d.stopping_timer = QTimer.singleShot(3000, self.on_stopping_timeout)
+            self.play_button.setEnabled(True)
             d.stopping = True
             d.device.stop()
         if text == "Rebooting..":
@@ -631,8 +632,6 @@ class MediaListener:
             _self.progress_slider.setEnabled(False)
             _self.progress_label.setText(d.time.toString("hh:mm:ss"))
             _self.set_icon(_self.play_button, "SP_MediaPlay")
-            if not d.rebooting and not d.live:
-                _self.play_button.setEnabled(True)
             d.playing = False
             d.paused = True
             d.live = False
