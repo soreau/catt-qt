@@ -5,11 +5,11 @@ Written using catt api and pychromecast
 
 Features:
 - Control muliple chromecasts selectable from list
+- Get data in real time and shows changes from other devices
 - Able to cast weblinks from the gui such as youtube
-- Gets data in real time and shows changes from other devices
-- Controls: Play/Pause/Stop/Seek/Volume/Reboot
-- Manage streams started by other devices
 - Supports device reboot with initial volume setting
+- Manage streams started by other devices
+- Play/Pause/Stop/Seek/Volume/Reboot
 
 Limitations:
 - Takes about 8 seconds to scan for chromecasts when started
