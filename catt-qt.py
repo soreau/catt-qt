@@ -575,7 +575,6 @@ class MediaListener:
             return
         d.duration = status.duration
         d.stopping = False
-        d.rebooting = False
         d.title = status.title
         if d.stopping_timer:
             _self.stopping_timer_cancel.emit(i)
@@ -627,11 +626,14 @@ class MediaListener:
             _self.progress_slider.setEnabled(False)
             _self.progress_label.setText(d.time.toString("hh:mm:ss"))
             _self.set_icon(_self.play_button, "SP_MediaPlay")
+            if not d.rebooting and not d.live:
+                _self.play_button.setEnabled(True)
             d.playing = False
             d.paused = True
             d.live = False
             d.error = ""
             _self.update_text(d)
+        d.rebooting = False
 
 
 class StatusListener:
