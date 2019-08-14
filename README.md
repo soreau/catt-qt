@@ -4,16 +4,15 @@ Cast All The Things Qt GUI
 Written using catt api and pychromecast
 
 Features:
+- Able to cast files, links and playlist urls
 - Control muliple chromecasts selectable from list
 - Get data in real time and shows changes from other devices
-- Able to cast weblinks from the gui such as youtube
 - Supports device reboot with initial volume setting
 - Manage streams started by other devices
 - Play/Pause/Stop/Seek/Volume/Reboot
 
 Limitations:
 - Takes about 8 seconds to scan for chromecasts when started
-- Doesn't support loading playlists or files
 - Requires [this pychromecast patch](https://github.com/balloob/pychromecast/pull/305) for detecting reboots properly
 
 Usage:
