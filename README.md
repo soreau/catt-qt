@@ -13,7 +13,9 @@ Features:
 
 Limitations:
 - Takes about 8 seconds to scan for chromecasts when started
+- Youtube playlists should be in the format https://www.youtube.com/watch?list=<list_id>
 - Requires [this pychromecast patch](https://github.com/balloob/pychromecast/pull/305) for detecting reboots properly
+- Services that require login or complicated clicks in browser to play need to be started from a browser or other device
 
 Usage:
 - Install [catt](https://github.com/skorokithakis/catt) and [pychromecast](https://github.com/balloob/pychromecast/commit/15655117236b4d856677d5c58a0a29883665003a) with pip3
