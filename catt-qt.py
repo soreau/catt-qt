@@ -5,12 +5,16 @@
 import os
 import sys
 import catt.api
+import subprocess
 from catt.api import CattDevice
 import pychromecast
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import Qt, QTimer, QTime, QThread, pyqtSignal
 
+# Pipe stderr to /dev/null
+devnull = open(os.devnull, "w")
+sys.stderr = devnull
 
 # On Chromecast reboot, the volume is set to maximum.
 # This value is used to set a custom initial volume
@@ -57,7 +61,11 @@ class Device:
     def on_progress_tick(self):
         _self = self._self
         self.time = self.time.addSecs(1)
-        if self.duration and self.duration != 0 and time_to_seconds(self.time) >= int(self.duration):
+        if (
+            self.duration
+            and self.duration != 0
+            and time_to_seconds(self.time) >= int(self.duration)
+        ):
             _self.stop_timer.emit(self.index)
             if _self.combo_box.currentIndex() == self.index:
                 _self.set_progress(0)
@@ -80,9 +88,17 @@ class PlayThread(QThread):
     def __init__(self):
         QThread.__init__(self)
 
-    # run method gets called when we start the thread
     def run(self):
-        self.d.device.play_url(self.text, resolve=True, block=False)
+        # Until play_url can play playlists and files, call catt cli
+
+        # self.d.device.play_url(self.text, resolve=True, block=False)
+
+        if self.text != "":
+            subprocess.Popen(
+                ["catt", "-d", self.d.device.name, "cast", self.text],
+                stdout=devnull,
+                stderr=devnull,
+            )
 
 
 class App(QMainWindow):
@@ -225,16 +241,9 @@ class App(QMainWindow):
         d.time.setHMS(0, 0, 0)
         self.progress_label.setText(d.time.toString("hh:mm:ss"))
         self.progress_label.update()
-        try:
-            d.device.stop()
-            d.cast.wait()
-            self.play_thread.d = d
-            self.play_thread.text = text
-            self.play_thread.start()
-        except Exception as e:
-            self.status_label.setText(str(e))
-            d.error = str(e)
-            print(e)
+        self.play_thread.d = d
+        self.play_thread.text = text
+        self.play_thread.start()
 
     def on_play_click(self):
         i = self.combo_box.currentIndex()
@@ -248,14 +257,11 @@ class App(QMainWindow):
                 self.set_icon(self.play_button, "SP_MediaPause")
                 d.paused = False
                 return
-            text = self.textbox.text()
-            if "://" in text:
-                self.play(d, text)
+            self.play(d, self.textbox.text())
         elif d.playing:
             if self.textbox_return:
-                text = self.textbox.text()
                 self.textbox_return = False
-                self.play(d, text)
+                self.play(d, self.textbox.text())
                 return
             self.set_icon(self.play_button, "SP_MediaPlay")
             d.device.pause()
