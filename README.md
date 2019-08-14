@@ -17,6 +17,7 @@ Limitations:
 
 Usage:
 - Install [catt](https://github.com/skorokithakis/catt) and [pychromecast](https://github.com/balloob/pychromecast) with pip3
+- Install PyQt5
 - Install git and clone catt-qt
 - Run ./catt-qt.py from the repository directory
 
