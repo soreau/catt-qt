@@ -707,7 +707,7 @@ class StatusListener:
         if not _self.volume_status_event_pending:
             _self.dial.valueChanged.disconnect(_self.on_dial_moved)
             _self.dial.setValue(v)
-            _self.volume_label.setText(self.volume_prefix + str(int(v)))
+            _self.volume_label.setText(_self.volume_prefix + str(int(v)))
             _self.dial.valueChanged.connect(_self.on_dial_moved)
         _self.volume_status_event_pending = False
 
