@@ -120,7 +120,6 @@ class App(QMainWindow):
         self.progress_slider.valueChanged.connect(self.on_progress_value_changed)
         self.progress_slider.sliderPressed.connect(self.on_progress_pressed)
         self.progress_slider.sliderReleased.connect(self.on_progress_released)
-        self.progress_slider.setValue(0)
         self.skip_forward_button = QPushButton()
         self.set_icon(self.skip_forward_button, "SP_MediaSkipForward")
         self.skip_forward_button.setToolTip("Skip")
