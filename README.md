@@ -16,7 +16,7 @@ Limitations:
 - Requires [this pychromecast patch](https://github.com/balloob/pychromecast/pull/305) for detecting reboots properly
 
 Usage:
-- Install [catt](https://github.com/skorokithakis/catt) and [pychromecast](https://github.com/balloob/pychromecast) with pip3
+- Install [catt](https://github.com/skorokithakis/catt) and [pychromecast](https://github.com/balloob/pychromecast/commit/15655117236b4d856677d5c58a0a29883665003a) with pip3
 - Install PyQt5
 - Install git and clone catt-qt
 - Run ./catt-qt.py from the repository directory
