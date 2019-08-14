@@ -46,6 +46,8 @@ class Device:
         self.title = ""
         self.status_text = ""
         self.live = False
+        self.muted = False
+        self.unmute_volume = 0
         self.paused = True
         self.playing = False
         self.stopping = False
@@ -117,6 +119,16 @@ class ComboBox(QComboBox):
         self._self.stop("Rebooting..")
 
 
+class Dial(QDial):
+    def __init__(self, s):
+        super(Dial, self).__init__()
+        self._self = s
+
+    def mousePressEvent(self, event):
+        if event.button() == Qt.MiddleButton:
+            self._self.toggle_mute()
+
+
 class App(QMainWindow):
     start_timer = pyqtSignal(int)
     stop_timer = pyqtSignal(int)
@@ -132,7 +144,7 @@ class App(QMainWindow):
     def create_control_layout(self):
         self.control_layout = QHBoxLayout()
         self.volume_layout = QVBoxLayout()
-        self.dial = QDial()
+        self.dial = Dial(self)
         self.dial.setMinimum(0)
         self.dial.setMaximum(100)
         self.dial.setValue(0)
@@ -393,6 +405,19 @@ class App(QMainWindow):
         elif self.dial.value() == 100:
             d.device.volume(1.0)
         self.volume_label.setText(self.volume_prefix + str(int(self.dial.value())))
+
+    def toggle_mute(self):
+        i = self.combo_box.currentIndex()
+        d = self.get_device_from_index(i)
+        if d == None:
+            return
+        if d.muted:
+            d.device.volume(d.unmute_volume / 100)
+            d.muted = False
+        else:
+            d.unmute_volume = d.volume
+            d.device.volume(0.0)
+            d.muted = True
 
     def seek(self, d, value):
         self.status_label.setText("Seeking..")
