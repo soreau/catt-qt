@@ -152,7 +152,7 @@ class App(QMainWindow):
         self.dial.setToolTip("Volume")
         self.volume_prefix = "Vol: "
         self.volume_label = QLabel()
-        self.volume_label.setText(self.volume_prefix + str(int(0)))
+        self.volume_label.setText(self.volume_prefix + "0")
         self.volume_label.setAlignment(Qt.AlignCenter)
         self.volume_status_event_pending = False
         self.volume_event_timer = QTimer()
@@ -378,11 +378,16 @@ class App(QMainWindow):
             enabled = not d.rebooting
             self.play_button.setEnabled(enabled)
             self.stop_button.setEnabled(enabled)
-        self.dial.valueChanged.disconnect(self.on_dial_moved)
-        self.dial.setValue(d.volume)
-        self.volume_label.setText(self.volume_prefix + str(int(d.volume)))
-        self.dial.valueChanged.connect(self.on_dial_moved)
+        self.set_dial_value(d)
         self.update_text(d)
+
+    def set_dial_value(self, d):
+        self.dial.valueChanged.disconnect(self.on_dial_moved)
+        if d.volume != 0:
+            d.unmute_volume = d.volume
+        self.dial.setValue(d.volume)
+        self.set_volume_label(d.volume)
+        self.dial.valueChanged.connect(self.on_dial_moved)
 
     def on_skip_click(self):
         i = self.combo_box.currentIndex()
@@ -402,9 +407,10 @@ class App(QMainWindow):
             self.volume_event_timer.start(250)
         elif self.dial.value() == 0:
             d.device.volume(0.0)
+            self.set_volume_label(0)
         elif self.dial.value() == 100:
             d.device.volume(1.0)
-        self.volume_label.setText(self.volume_prefix + str(int(self.dial.value())))
+            self.set_volume_label(100)
 
     def toggle_mute(self):
         i = self.combo_box.currentIndex()
@@ -498,7 +504,7 @@ class App(QMainWindow):
         if self.combo_box.currentIndex() == device.index:
             self.play_button.setEnabled(True)
             self.stop_button.setEnabled(True)
-        self.volume_label.setText(self.volume_prefix + str(int(REBOOT_VOLUME * 100)))
+        self.set_volume_label(REBOOT_VOLUME * 100)
         d.volume(REBOOT_VOLUME)
 
     def on_remove_device(self, ip):
@@ -606,6 +612,9 @@ class App(QMainWindow):
         minutes = (s - (hours * 3600)) // 60
         seconds = s - ((hours * 3600) + (minutes * 60))
         return hours, minutes, seconds
+
+    def set_volume_label(self, v):
+        self.volume_label.setText(self.volume_prefix + str(int(v)))
 
 
 class MediaListener:
@@ -738,10 +747,10 @@ class StatusListener:
         d.volume = v
         d.status_text = status.status_text
         if not _self.volume_status_event_pending:
-            _self.dial.valueChanged.disconnect(_self.on_dial_moved)
-            _self.dial.setValue(v)
-            _self.volume_label.setText(_self.volume_prefix + str(int(v)))
-            _self.dial.valueChanged.connect(_self.on_dial_moved)
+            _self.set_dial_value(d)
+        elif d.volume > 0:
+            _self.set_volume_label(d.volume)
+            d.muted = False
         _self.volume_status_event_pending = False
 
 
