@@ -614,7 +614,7 @@ class App(QMainWindow):
         return hours, minutes, seconds
 
     def set_volume_label(self, v):
-        self.volume_label.setText(self.volume_prefix + str(int(v)))
+        self.volume_label.setText(self.volume_prefix + str(round(v)))
 
 
 class MediaListener:
@@ -748,9 +748,10 @@ class StatusListener:
         d.status_text = status.status_text
         if not _self.volume_status_event_pending:
             _self.set_dial_value(d)
-        elif d.volume > 0:
+        else:
             _self.set_volume_label(d.volume)
-            d.muted = False
+            if d.volume > 0:
+                d.muted = False
         _self.volume_status_event_pending = False
 
 
