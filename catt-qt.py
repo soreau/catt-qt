@@ -146,6 +146,15 @@ class Device:
         if s.status_label.text() != "Playing..":
             self.update_text()
 
+    def set_dial_value(self):
+        s = self._self
+        s.dial.valueChangeself.disconnect(s.on_dial_moved)
+        if self.volume != 0:
+            self.unmute_volume = self.volume
+        s.dial.setValue(self.volume)
+        s.set_volume_label(self.volume)
+        s.dial.valueChangeself.connect(s.on_dial_moved)
+
     def split_seconds(self, s):
         hours = s // 3600
         minutes = (s - (hours * 3600)) // 60
@@ -448,16 +457,8 @@ class App(QMainWindow):
             enabled = not d.rebooting
             self.play_button.setEnabled(enabled)
             self.stop_button.setEnabled(enabled)
-        self.set_dial_value(d)
+        d.set_dial_value()
         d.update_text()
-
-    def set_dial_value(self, d):
-        self.dial.valueChanged.disconnect(self.on_dial_moved)
-        if d.volume != 0:
-            d.unmute_volume = d.volume
-        self.dial.setValue(d.volume)
-        self.set_volume_label(d.volume)
-        self.dial.valueChanged.connect(self.on_dial_moved)
 
     def on_skip_click(self):
         i = self.combo_box.currentIndex()
@@ -713,7 +714,7 @@ class StatusListener:
         d.volume = v
         d.status_text = status.status_text
         if not s.volume_status_event_pending:
-            s.set_dial_value(d)
+            d.set_dial_value()
         else:
             s.set_volume_label(d.volume)
             if d.volume > 0:
