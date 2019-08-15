@@ -14,7 +14,7 @@ Features:
 
 Limitations:
 - Takes about 8 seconds to scan for chromecasts when started
-- Requires [this pychromecast patch](https://github.com/balloob/pychromecast/commit/15655117236b4d856677d5c58a0a29883665003a) for detecting reboots properly
+- Requires pychromecast 3.2.3 or [this patch](https://github.com/balloob/pychromecast/commit/15655117236b4d856677d5c58a0a29883665003a) for detecting reboots properly
 - Services that require login or complicated clicks in browser to play need to be started from a browser or other device
 
 Install:
