@@ -8,10 +8,14 @@ requires=[
 ]
 requires-python="3"
 description-file="README.md"
+
 [tool.flit.metadata]
 module = "cattqt"
 author = "Scott Moreau"
 author-email = "oreaus@gmail.com"
 home-page = "https://github.com/soreau/catt-qt"
 classifiers = ["License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)"]
+
+[tool.flit.scripts]
+catt-qt = "cattqt:main"
 

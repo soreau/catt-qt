@@ -298,9 +298,10 @@ class App(QMainWindow):
         self.status_label.setAlignment(Qt.AlignCenter)
         self.status_layout.addWidget(self.status_label)
 
-    def __init__(self):
+    def __init__(self, app):
         super().__init__()
         self.title = "Cast All The Things"
+        self.app = app
         self.width = 640
         self.height = 1
         self.initUI()
@@ -552,7 +553,7 @@ class App(QMainWindow):
         d.time.setHMS(h, m, s)
 
     def set_icon(self, button, icon):
-        button.setIcon(app.style().standardIcon(getattr(QStyle, icon)))
+        button.setIcon(self.app.style().standardIcon(getattr(QStyle, icon)))
 
     def event_pending_expired(self):
         self.volume_status_event_pending = False
@@ -732,8 +733,7 @@ class ConnectionListener:
             print(status.address.address, "disconnected")
             _self.remove_device.emit(status.address.address)
 
-
-if __name__ == "__main__":
+def main():
     app = QApplication(sys.argv)
-    ex = App()
+    ex = App(app)
     sys.exit(app.exec_())
