@@ -1,6 +1,6 @@
 """A control GUI for Chromecasts"""
 
-__version__ = '0.1'
+__version__ = "0.2"
 
 # Copyright 2019 - Scott Moreau
 
@@ -732,6 +732,7 @@ class ConnectionListener:
         elif status.status == "LOST":
             print(status.address.address, "disconnected")
             _self.remove_device.emit(status.address.address)
+
 
 def main():
     app = QApplication(sys.argv)
