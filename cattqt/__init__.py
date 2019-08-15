@@ -14,4 +14,4 @@ def main() -> None:
 
 __author__ = "Scott Moreau"
 __email__ = "oreaus@gmail.com"
-__version__ = "0.4"
+__version__ = "0.5"
