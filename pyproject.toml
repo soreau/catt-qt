@@ -4,7 +4,7 @@ requires=[
     "flit",
     "catt",
     "pyqt5",
-    "pychromecast",
+    "pychromecast >=3.2.3",
 ]
 requires-python="3"
 description-file="README.md"
