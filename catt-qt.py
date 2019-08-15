@@ -10,7 +10,7 @@ from catt.api import CattDevice
 import pychromecast
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
-from PyQt5.QtCore import Qt, QTimer, QTime, QThread, pyqtSignal
+from PyQt5.QtCore import Qt, QTimer, QTime, pyqtSignal
 
 devnull = open(os.devnull, "w")
 
