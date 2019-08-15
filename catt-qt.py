@@ -363,7 +363,9 @@ class App(QMainWindow):
         self.show()
 
     def play(self, d, text):
-        if text == "" or (not "://" in text and not text.startswith("/")):
+        if text == "" or (
+            not "://" in text and not ":\\" in text and not text.startswith("/")
+        ):
             return
         self.status_label.setText("Playing..")
         subprocess.Popen(["catt", "-d", d.device.name, "cast", text])
