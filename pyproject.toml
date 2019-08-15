@@ -7,7 +7,7 @@ requires=[
     "pychromecast >=3.2.3",
 ]
 requires-python="3"
-description-file="README.md"
+description-file="README.rst"
 
 [tool.flit.metadata]
 module = "cattqt"
