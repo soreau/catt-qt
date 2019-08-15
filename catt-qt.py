@@ -356,6 +356,7 @@ class App(QMainWindow):
         self.main_layout.addLayout(self.control_layout)
         self.main_layout.addLayout(self.seek_layout)
         self.main_layout.addLayout(self.status_layout)
+        self.main_layout.addStretch()
         self.widget = QWidget()
         self.widget.setLayout(self.main_layout)
         self.setCentralWidget(self.widget)
