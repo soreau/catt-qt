@@ -1,7 +1,7 @@
 [build-system]
-requires = ["flit"]
 build-backend = "flit.buildapi"
 requires=[
+    "flit",
     "catt",
     "pyqt5",
     "pychromecast",
