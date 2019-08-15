@@ -148,12 +148,12 @@ class Device:
 
     def set_dial_value(self):
         s = self._self
-        s.dial.valueChangeself.disconnect(s.on_dial_moved)
+        s.dial.valueChanged.disconnect(s.on_dial_moved)
         if self.volume != 0:
             self.unmute_volume = self.volume
         s.dial.setValue(self.volume)
         s.set_volume_label(self.volume)
-        s.dial.valueChangeself.connect(s.on_dial_moved)
+        s.dial.valueChanged.connect(s.on_dial_moved)
 
     def split_seconds(self, s):
         hours = s // 3600
