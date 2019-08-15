@@ -1,4 +1,6 @@
-#!/usr/bin/python3
+"""A control GUI for Chromecasts"""
+
+__version__ = '0.1'
 
 # Copyright 2019 - Scott Moreau
 
