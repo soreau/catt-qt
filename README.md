@@ -10,6 +10,7 @@ Features:
 - Supports device reboot with initial volume setting
 - Manage streams started by other devices
 - Play/Pause/Stop/Seek/Volume/Reboot
+- Multi-platform
 
 Limitations:
 - Takes about 8 seconds to scan for chromecasts when started
@@ -17,7 +18,7 @@ Limitations:
 - Services that require login or complicated clicks in browser to play need to be started from a browser or other device
 
 Install:
-- `pip3 install cattqt`
+- `pip3 install cattqt` will install from [pypi](https://pypi.org/project/cattqt/)
 
 Run:
 - `catt-qt`
