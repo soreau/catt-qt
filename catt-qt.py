@@ -66,39 +66,124 @@ class Device:
             and self.duration != 0
             and time_to_seconds(self.time) >= int(self.duration)
         ):
-            _self.stop_timer.emit(self.index)
+            # If progress is at the end, stop the device progress timer
+            self.set_state_idle(self.index)
             if _self.combo_box.currentIndex() == self.index:
-                _self.set_progress(0)
-                self.time.setHMS(0, 0, 0)
-                _self.skip_forward_button.setEnabled(False)
-                _self.progress_slider.setEnabled(False)
-                _self.progress_label.setText(self.time.toString("hh:mm:ss"))
-                _self.set_icon(_self.play_button, "SP_MediaPlay")
-                self.playing = False
-                self.paused = True
-                self.live = False
-                self.error = ""
-                _self.update_text(self)
+                # If it is the currently selected device, update the ui
+                self.update_ui_idle()
         if _self.combo_box.currentIndex() == self.index:
+            # Update the ui elements using current progress time
             _self.progress_label.setText(self.time.toString("hh:mm:ss"))
             _self.set_progress(time_to_seconds(self.time))
 
+    def set_state_playing(self, i, time):
+        s = self._self
+        hours, minutes, seconds = self.split_seconds(int(time))
+        s.set_time(i, hours, minutes, seconds)
+        self.paused = False
+        self.playing = True
+        self.error = ""
+        if self.live:
+            s.stop_timer.emit(i)
+            self.time.setHMS(0, 0, 0)
+        else:
+            s.start_timer.emit(i)
 
-class PlayThread(QThread):
-    def __init__(self):
-        QThread.__init__(self)
+    def update_ui_playing(self, time, duration):
+        s = self._self
+        if duration != None:
+            s.progress_slider.setMaximum(duration)
+        if self.live:
+            self.status_text = self.title = ""
+            s.skip_forward_button.setEnabled(False)
+            s.progress_slider.setEnabled(False)
+            s.progress_label.setText("LIVE")
+            s.set_icon(s.play_button, "SP_MediaPlay")
+        else:
+            s.skip_forward_button.setEnabled(True)
+            s.progress_slider.setEnabled(True)
+            s.set_icon(s.play_button, "SP_MediaPause")
+        s.set_progress(time)
+        s.progress_label.setText(self.time.toString("hh:mm:ss"))
+        self.update_text()
 
-    def run(self):
-        # Until play_url can play playlists and files, call catt cli
+    def set_state_paused(self, i, time):
+        s = self._self
+        hours, minutes, seconds = self.split_seconds(int(time))
+        s.set_time(i, hours, minutes, seconds)
+        s.stop_timer.emit(i)
+        self.paused = True
+        self.playing = True
+        self.error = ""
 
-        # self.d.device.play_url(self.text, resolve=True, block=False)
+    def update_ui_paused(self, time, duration):
+        s = self._self
+        if duration != None:
+            s.progress_slider.setMaximum(duration)
+        s.set_progress(time)
+        s.skip_forward_button.setEnabled(True)
+        s.progress_slider.setEnabled(True)
+        s.set_icon(s.play_button, "SP_MediaPlay")
+        s.progress_label.setText(self.time.toString("hh:mm:ss"))
+        self.update_text()
 
-        if self.text != "":
-            subprocess.Popen(
-                ["catt", "-d", self.d.device.name, "cast", self.text],
-                stdout=devnull,
-                stderr=devnull,
-            )
+    def set_state_idle(self, i):
+        s = self._self
+        s.stop_timer.emit(i)
+        self.time.setHMS(0, 0, 0)
+        self.playing = False
+        self.paused = True
+        self.live = False
+        self.status_text = self.title = self.error = ""
+
+    def update_ui_idle(self):
+        s = self._self
+        s.set_progress(0)
+        s.skip_forward_button.setEnabled(False)
+        s.progress_slider.setEnabled(False)
+        s.progress_label.setText(self.time.toString("hh:mm:ss"))
+        s.set_icon(s.play_button, "SP_MediaPlay")
+        if s.status_label.text() != "Playing..":
+            self.update_text()
+
+    def split_seconds(self, s):
+        hours = s // 3600
+        minutes = (s - (hours * 3600)) // 60
+        seconds = s - ((hours * 3600) + (minutes * 60))
+        return hours, minutes, seconds
+
+    def update_text(self):
+        s = self._self
+        prefix = ""
+        if self.error:
+            prefix = self.error
+        elif self.live:
+            prefix = "Streaming"
+        elif not self.playing:
+            if not self.stopping and not self.rebooting:
+                s.status_label.setText("Idle")
+            elif self.stopping:
+                s.status_label.setText("Stopping..")
+            elif self.rebooting:
+                s.status_label.setText("Rebooting..")
+            return
+        elif self.paused:
+            prefix = "Paused"
+        if prefix and (self.status_text or self.title):
+            prefix = prefix + " - "
+        if self.status_text and self.title:
+            if self.status_text in self.title:
+                s.status_label.setText(prefix + self.title)
+            elif self.title in self.status_text:
+                s.status_label.setText(prefix + self.status_text)
+            else:
+                s.status_label.setText(prefix + self.status_text + " - " + self.title)
+        elif self.status_text:
+            s.status_label.setText(prefix + self.status_text)
+        elif self.title:
+            s.status_label.setText(prefix + self.title)
+        else:
+            s.status_label.setText(prefix)
 
 
 class ComboBox(QComboBox):
@@ -236,7 +321,6 @@ class App(QMainWindow):
         self.add_device.connect(self.on_add_device)
         self.remove_device.connect(self.on_remove_device)
         self.stopping_timer_cancel.connect(self.on_stopping_timer_cancel)
-        self.play_thread = PlayThread()
         self.textbox_return = False
         self.device_list = []
         if num_devices > 1:
@@ -271,15 +355,13 @@ class App(QMainWindow):
         self.show()
 
     def play(self, d, text):
+        if text == "" or (not "://" in text and not text.startswith("/")):
+            return
         self.set_icon(self.play_button, "SP_MediaPause")
         self.status_label.setText("Playing..")
-        self.status_label.update()
-        d.time.setHMS(0, 0, 0)
-        self.progress_label.setText(d.time.toString("hh:mm:ss"))
-        self.progress_label.update()
-        self.play_thread.d = d
-        self.play_thread.text = text
-        self.play_thread.start()
+        subprocess.Popen(
+            ["catt", "-d", d.device.name, "cast", text], stdout=devnull, stderr=devnull
+        )
 
     def on_play_click(self):
         i = self.combo_box.currentIndex()
@@ -322,27 +404,16 @@ class App(QMainWindow):
         if d == None:
             return
         d.stopping = False
-        self.update_text(d)
+        d.update_text()
 
     def stop(self, text):
         i = self.combo_box.currentIndex()
         d = self.get_device_from_index(i)
         if d == None:
             return
-        d.status_text = d.title = ""
+        d.set_state_idle(i)
         self.status_label.setText(text)
-        self.status_label.update()
-        self.stop_timer.emit(i)
-        d.time.setHMS(0, 0, 0)
-        self.set_progress(0)
-        self.progress_label.setText(d.time.toString("hh:mm:ss"))
-        self.set_icon(self.play_button, "SP_MediaPlay")
-        self.skip_forward_button.setEnabled(False)
-        self.progress_slider.setEnabled(False)
-        d.playing = False
-        d.paused = True
-        d.live = False
-        d.error = ""
+        d.update_ui_idle()
         return d
 
     def on_stop_click(self):
@@ -378,7 +449,7 @@ class App(QMainWindow):
             self.play_button.setEnabled(enabled)
             self.stop_button.setEnabled(enabled)
         self.set_dial_value(d)
-        self.update_text(d)
+        d.update_text()
 
     def set_dial_value(self, d):
         self.dial.valueChanged.disconnect(self.on_dial_moved)
@@ -426,7 +497,6 @@ class App(QMainWindow):
 
     def seek(self, d, value):
         self.status_label.setText("Seeking..")
-        self.status_label.update()
         d.device.seek(value)
 
     def on_progress_value_changed(self):
@@ -542,7 +612,7 @@ class App(QMainWindow):
                 self.combo_box.addItem(_d.device.name)
                 _d.media_listener.index = _d.status_listener.index = _d.index = i
                 if i == 0:
-                    self.update_text(_d)
+                    _d.update_text()
                 i = i + 1
                 devices_active = True
             j = j + 1
@@ -562,39 +632,6 @@ class App(QMainWindow):
                 return d
         return None
 
-    def update_text(self, d):
-        prefix = ""
-        if d.error:
-            prefix = d.error
-        elif d.live:
-            prefix = "Streaming"
-        elif not d.playing:
-            if not d.stopping and not d.rebooting:
-                self.status_label.setText("Idle")
-            elif d.stopping:
-                self.status_label.setText("Stopping..")
-            elif d.rebooting:
-                self.status_label.setText("Rebooting..")
-            return
-        elif d.paused:
-            prefix = "Paused"
-        if prefix and (d.status_text or d.title):
-            prefix = prefix + " - "
-        if d.status_text and d.title:
-            if d.status_text in d.title:
-                self.status_label.setText(prefix + d.title)
-            elif d.title in d.status_text:
-                self.status_label.setText(prefix + d.status_text)
-            else:
-                self.status_label.setText(prefix + d.status_text + " - " + d.title)
-        elif d.status_text:
-            self.status_label.setText(prefix + d.status_text)
-        elif d.title:
-            self.status_label.setText(prefix + d.title)
-        else:
-            self.status_label.setText(prefix)
-        self.status_label.update()
-
     def set_progress(self, v):
         try:
             self.progress_slider.valueChanged.disconnect(self.on_progress_value_changed)
@@ -606,90 +643,20 @@ class App(QMainWindow):
         except:
             pass
 
-    def split_seconds(self, s):
-        hours = s // 3600
-        minutes = (s - (hours * 3600)) // 60
-        seconds = s - ((hours * 3600) + (minutes * 60))
-        return hours, minutes, seconds
-
     def set_volume_label(self, v):
         self.volume_label.setText(self.volume_prefix + str(round(v)))
-
-    def set_state_playing(self, d, i, time):
-        hours, minutes, seconds = self.split_seconds(int(time))
-        self.set_time(i, hours, minutes, seconds)
-        d.paused = False
-        d.playing = True
-        d.error = ""
-        if d.live:
-            self.stop_timer.emit(i)
-            d.time.setHMS(0, 0, 0)
-        else:
-            self.start_timer.emit(i)
-
-    def update_ui_playing(self, d, time, duration):
-        if duration != None:
-            self.progress_slider.setMaximum(duration)
-        if d.live:
-            d.status_text = d.title = ""
-            self.skip_forward_button.setEnabled(False)
-            self.progress_slider.setEnabled(False)
-            self.progress_label.setText("LIVE")
-            self.set_icon(_self.play_button, "SP_MediaPlay")
-        else:
-            self.skip_forward_button.setEnabled(True)
-            self.progress_slider.setEnabled(True)
-            self.set_icon(self.play_button, "SP_MediaPause")
-        self.set_progress(time)
-        self.progress_label.setText(d.time.toString("hh:mm:ss"))
-        self.update_text(d)
-
-    def set_state_paused(self, d, i, time):
-        hours, minutes, seconds = self.split_seconds(int(time))
-        self.set_time(i, hours, minutes, seconds)
-        self.stop_timer.emit(i)
-        d.paused = True
-        d.playing = True
-        d.error = ""
-
-    def update_ui_paused(self, d, time, duration):
-        if duration != None:
-            self.progress_slider.setMaximum(duration)
-        self.set_progress(time)
-        self.skip_forward_button.setEnabled(True)
-        self.progress_slider.setEnabled(True)
-        self.set_icon(self.play_button, "SP_MediaPlay")
-        self.progress_label.setText(d.time.toString("hh:mm:ss"))
-        self.update_text(d)
-
-    def set_state_idle(self, d, i):
-        self.stop_timer.emit(i)
-        d.time.setHMS(0, 0, 0)
-        d.playing = False
-        d.paused = True
-        d.live = False
-        d.error = ""
-
-    def update_ui_idle(self, d):
-        self.set_progress(0)
-        self.skip_forward_button.setEnabled(False)
-        self.progress_slider.setEnabled(False)
-        self.progress_label.setText(d.time.toString("hh:mm:ss"))
-        self.set_icon(self.play_button, "SP_MediaPlay")
-        if self.status_label.text() != "Playing..":
-            self.update_text(d)
 
 
 class MediaListener:
     def new_media_status(self, status):
-        _self = self._self
-        i = _self.combo_box.currentIndex()
+        s = self._self
+        i = s.combo_box.currentIndex()
         index = self.index
         if index == -1:
             return
         self.supports_seek = status.supports_seek
         if i != index:
-            d = _self.get_device_from_index(index)
+            d = s.get_device_from_index(index)
             if d == None:
                 return
             d.duration = status.duration
@@ -698,13 +665,13 @@ class MediaListener:
             d.rebooting = False
             if status.player_state == "PLAYING":
                 d.live = status.stream_type == "LIVE"
-                _self.set_state_playing(d, index, status.current_time)
+                d.set_state_playing(index, status.current_time)
             elif status.player_state == "PAUSED":
-                _self.set_state_paused(d, index, status.current_time)
+                d.set_state_paused(index, status.current_time)
             elif status.player_state == "IDLE" or status.player_state == "UNKNOWN":
-                _self.set_state_idle(d, index)
+                d.set_state_idle(index)
             return
-        d = _self.get_device_from_index(i)
+        d = s.get_device_from_index(i)
         if d == None:
             return
         d.duration = status.duration
@@ -712,46 +679,46 @@ class MediaListener:
         d.stopping = False
         d.rebooting = False
         if d.stopping_timer:
-            _self.stopping_timer_cancel.emit(i)
+            s.stopping_timer_cancel.emit(i)
         if status.player_state == "PLAYING":
             d.live = status.stream_type == "LIVE"
-            _self.set_state_playing(d, i, status.current_time)
-            _self.update_ui_playing(d, status.current_time, status.duration)
+            d.set_state_playing(i, status.current_time)
+            d.update_ui_playing(status.current_time, status.duration)
         elif status.player_state == "PAUSED":
-            _self.set_state_paused(d, i, status.current_time)
-            _self.update_ui_paused(d, status.current_time, status.duration)
+            d.set_state_paused(i, status.current_time)
+            d.update_ui_paused(status.current_time, status.duration)
         elif status.player_state == "IDLE" or status.player_state == "UNKNOWN":
-            _self.set_state_idle(d, i)
-            _self.update_ui_idle(d)
+            d.set_state_idle(i)
+            d.update_ui_idle()
 
 
 class StatusListener:
     def new_cast_status(self, status):
-        _self = self._self
-        i = _self.combo_box.currentIndex()
+        s = self._self
+        i = s.combo_box.currentIndex()
         index = self.index
         if index == -1:
             return
         v = status.volume_level * 100
-        d = _self.get_device_from_index(index)
+        d = s.get_device_from_index(index)
         if d == None:
             return
         if i != index:
             d.volume = v
             d.status_text = status.status_text
             return
-        d = _self.get_device_from_index(i)
+        d = s.get_device_from_index(i)
         if d == None:
             return
         d.volume = v
         d.status_text = status.status_text
-        if not _self.volume_status_event_pending:
-            _self.set_dial_value(d)
+        if not s.volume_status_event_pending:
+            s.set_dial_value(d)
         else:
-            _self.set_volume_label(d.volume)
+            s.set_volume_label(d.volume)
             if d.volume > 0:
                 d.muted = False
-        _self.volume_status_event_pending = False
+        s.volume_status_event_pending = False
 
 
 class ConnectionListener:
