@@ -734,7 +734,7 @@ class ConnectionListener:
             _self.remove_device.emit(status.address.address)
 
 
-def main():
+def main() -> None:
     app = QApplication(sys.argv)
     ex = App(app)
     sys.exit(app.exec_())
