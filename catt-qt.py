@@ -365,7 +365,7 @@ class App(QMainWindow):
         if text == "" or (not "://" in text and not text.startswith("/")):
             return
         self.status_label.setText("Playing..")
-        subprocess.run(["catt", "-d", d.device.name, "cast", text])
+        subprocess.Popen(["catt", "-d", d.device.name, "cast", text])
 
     def on_play_click(self):
         i = self.combo_box.currentIndex()
