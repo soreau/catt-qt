@@ -12,8 +12,6 @@ from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import Qt, QTimer, QTime, pyqtSignal
 
-devnull = open(os.devnull, "w")
-
 # On Chromecast reboot, the volume is set to maximum.
 # This value is used to set a custom initial volume
 # if a Chromecast is rebooted while this program is
@@ -367,9 +365,7 @@ class App(QMainWindow):
         if text == "" or (not "://" in text and not text.startswith("/")):
             return
         self.status_label.setText("Playing..")
-        subprocess.Popen(
-            ["catt", "-d", d.device.name, "cast", text], stdout=devnull, stderr=devnull
-        )
+        subprocess.run(["catt", "-d", d.device.name, "cast", text])
 
     def on_play_click(self):
         i = self.combo_box.currentIndex()
