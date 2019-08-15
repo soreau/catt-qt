@@ -23,4 +23,7 @@ Usage:
 - Install git and clone catt-qt
 - Run ./catt-qt.py from the repository directory
 
-![alt text](https://github.com/soreau/catt-qt/blob/master/screenshot.png "catt-qt")
+![X11](https://github.com/soreau/catt-qt/blob/master/screenshot-x11.png "catt-qt")
+![Wayland](https://github.com/soreau/catt-qt/blob/master/screenshot-wayland.png "catt-qt")
+![OSX](https://github.com/soreau/catt-qt/blob/master/screenshot-osx.png "catt-qt")
+![Windows](https://github.com/soreau/catt-qt/blob/master/screenshot-windows.png "catt-qt")
