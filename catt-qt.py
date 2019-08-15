@@ -366,7 +366,6 @@ class App(QMainWindow):
     def play(self, d, text):
         if text == "" or (not "://" in text and not text.startswith("/")):
             return
-        self.set_icon(self.play_button, "SP_MediaPause")
         self.status_label.setText("Playing..")
         subprocess.Popen(
             ["catt", "-d", d.device.name, "cast", text], stdout=devnull, stderr=devnull
