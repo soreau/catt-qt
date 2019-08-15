@@ -18,6 +18,8 @@ Limitations:
 
 Install:
 - `pip3 install cattqt`
+
+Run:
 - `catt-qt`
 
 ![X11](https://github.com/soreau/catt-qt/blob/master/screenshots/x11.png "X11")
