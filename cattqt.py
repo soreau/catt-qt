@@ -309,7 +309,7 @@ class App(QMainWindow):
     def initUI(self):
         self.setWindowTitle(self.title)
         self.setWindowIcon(
-            QIcon(os.path.dirname(os.path.realpath(__file__)) + "/icon/chromecast.png")
+            QIcon(os.path.dirname(os.path.realpath(__file__)) + "/data/chromecast.png")
         )
         self.setGeometry(640, 480, self.width, self.height)
         print("Scanning for Chromecast devices on the network...")
