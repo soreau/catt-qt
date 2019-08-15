@@ -1,6 +1,6 @@
 """A control GUI for Chromecasts"""
 
-__version__ = "0.2"
+__version__ = "0.3"
 
 # Copyright 2019 - Scott Moreau
 
