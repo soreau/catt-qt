@@ -195,21 +195,6 @@ class Device:
             s.status_label.setText(prefix)
 
 
-class PlayThread(QThread):
-    def __init__(self):
-        QThread.__init__(self)
-
-    def run(self):
-        # Until play_url can play playlists and files, call catt cli
-
-        # self.d.device.play_url(self.text, resolve=True, block=False)
-        subprocess.run(
-            ["catt", "-d", self.d.device.name, "cast", self.text],
-            stdout=devnull,
-            stderr=devnull,
-        )
-
-
 class ComboBox(QComboBox):
     def __init__(self, s):
         super(ComboBox, self).__init__()
@@ -345,7 +330,6 @@ class App(QMainWindow):
         self.add_device.connect(self.on_add_device)
         self.remove_device.connect(self.on_remove_device)
         self.stopping_timer_cancel.connect(self.on_stopping_timer_cancel)
-        self.play_thread = PlayThread()
         self.textbox_return = False
         self.device_list = []
         if num_devices > 1:
@@ -383,9 +367,9 @@ class App(QMainWindow):
         if text == "" or (not "://" in text and not text.startswith("/")):
             return
         self.status_label.setText("Playing..")
-        self.play_thread.d = d
-        self.play_thread.text = text
-        self.play_thread.start()
+        subprocess.Popen(
+            ["catt", "-d", d.device.name, "cast", text], stdout=devnull, stderr=devnull
+        )
 
     def on_play_click(self):
         i = self.combo_box.currentIndex()
