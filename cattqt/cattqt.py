@@ -280,6 +280,7 @@ class App(QMainWindow):
     def __init__(self, app):
         super().__init__()
         self.title = "Cast All The Things"
+        self.init_message = "Scanning network for Chromecast devices.."
         self.app = app
         self.width = 640
         self.height = 1
@@ -296,27 +297,37 @@ class App(QMainWindow):
             except Exception as e:
                 print("Setting default reboot volume of 25:", e)
                 self.reboot_volume = 25
+        self.splash = QSplashScreen(
+            QPixmap(os.path.dirname(os.path.realpath(__file__)) + "/splash.png")
+        )
+        self.splash.show()
+        self.splash.setEnabled(False)
+        self.splash.showMessage(self.init_message, Qt.AlignBottom | Qt.AlignCenter)
         self.initUI()
 
     def initUI(self):
+        print(self.init_message)
+        self.devices = catt.api.discover()
+        num_devices = len(self.devices)
+        if num_devices == 0:
+            print("No devices found")
+            reply = QMessageBox.question(
+                self,
+                "Error",
+                "No devices found. Retry?",
+                QMessageBox.Yes | QMessageBox.No,
+                QMessageBox.Yes,
+            )
+            if reply == QMessageBox.Yes:
+                self.initUI()
+                return
+            else:
+                sys.exit(1)
         self.setWindowTitle(self.title)
         self.setWindowIcon(
             QIcon(os.path.dirname(os.path.realpath(__file__)) + "/chromecast.png")
         )
         self.setGeometry(640, 480, self.width, self.height)
-        status_message = "Scanning network for Chromecast devices.."
-        print(status_message)
-        splash = QSplashScreen(
-            QPixmap(os.path.dirname(os.path.realpath(__file__)) + "/splash.png")
-        )
-        splash.setEnabled(False)
-        splash.show()
-        splash.showMessage(status_message, Qt.AlignBottom | Qt.AlignCenter)
-        self.devices = catt.api.discover()
-        num_devices = len(self.devices)
-        if num_devices == 0:
-            print("No devices found")
-            sys.exit(1)
         self.window = QWidget()
         self.main_layout = QVBoxLayout()
         self.create_devices_layout()
@@ -361,7 +372,7 @@ class App(QMainWindow):
         self.widget.setLayout(self.main_layout)
         self.setCentralWidget(self.widget)
         self.show()
-        splash.finish(self)
+        self.splash.finish(self)
 
     def play(self, d, text):
         if text == "" or (
