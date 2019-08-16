@@ -1,3 +1,5 @@
+"""A control GUI for Chromecasts"""
+
 # Copyright 2019 - Scott Moreau
 
 import os
