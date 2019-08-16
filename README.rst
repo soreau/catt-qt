@@ -1,8 +1,7 @@
-**cattqt** is a control GUI for Chromecasts.
-
-Written using catt api, pychromecast and Qt.
+**catt-qt** is a control GUI for Chromecasts.
 
 Features:
+---------
 
 
 * Able to cast files, links and playlist urls
@@ -20,11 +19,13 @@ Limitations:
 * Services that require login or complicated clicks in browser to play need to be started from a browser or other device
 
 Install:
+--------
 
 
 * ``pip3 install cattqt`` will install from `pypi <https://pypi.org/project/cattqt/>`_
 
 Run:
+----
 
 
 * ``catt-qt``
