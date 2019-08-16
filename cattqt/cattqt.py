@@ -304,7 +304,11 @@ class App(QMainWindow):
             QIcon(os.path.dirname(os.path.realpath(__file__)) + "/chromecast.png")
         )
         self.setGeometry(640, 480, self.width, self.height)
-        print("Scanning for Chromecast devices on the network...")
+        status_message = "Scanning network for Chromecast devices.."
+        print(status_message)
+        splash = QSplashScreen(QPixmap(os.path.dirname(os.path.realpath(__file__)) + "/splash.png"))
+        splash.show()
+        splash.showMessage(status_message, Qt.AlignBottom)
         self.devices = catt.api.discover()
         num_devices = len(self.devices)
         if num_devices == 0:
@@ -354,6 +358,7 @@ class App(QMainWindow):
         self.widget.setLayout(self.main_layout)
         self.setCentralWidget(self.widget)
         self.show()
+        splash.finish(self)
 
     def play(self, d, text):
         if text == "" or (
