@@ -8,7 +8,7 @@ from catt.api import CattDevice
 import pychromecast
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
-from PyQt5.QtCore import Qt, QTimer, QTime, pyqtSignal
+from PyQt5.QtCore import Qt, QTimer, QTime, QThread, pyqtSignal
 
 
 def time_to_seconds(time):
@@ -207,6 +207,19 @@ class Dial(QDial):
             self._self.toggle_mute()
 
 
+class SplashScreen(QSplashScreen):
+    painted = False
+
+    def paintEvent(self, event):
+        QSplashScreen.paintEvent(self, event)
+        self.painted = True
+
+    def ensure_first_paint(self):
+        while not self.painted:
+            QThread.usleep(250)
+            QApplication.processEvents()
+
+
 class App(QMainWindow):
     start_timer = pyqtSignal(int)
     stop_timer = pyqtSignal(int)
@@ -298,23 +311,25 @@ class App(QMainWindow):
             except Exception as e:
                 print(e)
                 print("Setting default reboot volume of 25")
-        self.splash = QSplashScreen(
+        self.initUI()
+
+    def initUI(self):
+        self.splash = SplashScreen(
             QPixmap(os.path.dirname(os.path.realpath(__file__)) + "/splash.png")
         )
         self.splash.show()
         self.splash.setEnabled(False)
         self.splash.showMessage(self.init_message, Qt.AlignBottom | Qt.AlignCenter)
-        self.initUI()
-
-    def initUI(self):
+        self.splash.ensure_first_paint()
         print(self.init_message)
         self.devices = catt.api.discover()
         num_devices = len(self.devices)
         if num_devices == 0:
+            self.splash.finish(self)
             print("No devices found")
             reply = QMessageBox.question(
                 self,
-                "Error",
+                "catt-qt",
                 "No devices found. Retry?",
                 QMessageBox.Yes | QMessageBox.No,
                 QMessageBox.Yes,
