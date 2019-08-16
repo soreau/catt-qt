@@ -284,6 +284,7 @@ class App(QMainWindow):
         self.app = app
         self.width = 640
         self.height = 1
+        self.reboot_volume = 25
         if len(sys.argv) == 2 and sys.argv[1].startswith("--reboot-volume="):
             try:
                 arg = sys.argv[1]
@@ -295,8 +296,8 @@ class App(QMainWindow):
                 else:
                     self.reboot_volume = int(arg)
             except Exception as e:
-                print("Setting default reboot volume of 25:", e)
-                self.reboot_volume = 25
+                print(e)
+                print("Setting default reboot volume of 25")
         self.splash = QSplashScreen(
             QPixmap(os.path.dirname(os.path.realpath(__file__)) + "/splash.png")
         )
