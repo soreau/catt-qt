@@ -32,6 +32,7 @@ Run:
 
 
 * ``catt-qt``
+* Optionally specify --reboot-volume with range of 0-100: ``catt-qt --reboot-volume=25``
 
 
 .. image:: https://github.com/soreau/catt-qt/blob/master/screenshots/x11.png

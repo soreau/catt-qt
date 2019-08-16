@@ -10,12 +10,6 @@ from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import Qt, QTimer, QTime, pyqtSignal
 
-# On Chromecast reboot, the volume is set to maximum.
-# This value is used to set a custom initial volume
-# if a Chromecast is rebooted while this program is
-# running. The range is 0.0 - 1.0.
-REBOOT_VOLUME = 0.25
-
 
 def time_to_seconds(time):
     return time.hour() * 3600 + time.minute() * 60 + time.second()
@@ -300,6 +294,19 @@ class App(QMainWindow):
         self.app = app
         self.width = 640
         self.height = 1
+        if len(sys.argv) == 2 and sys.argv[1].startswith("--reboot-volume="):
+            try:
+                arg = sys.argv[1]
+                arg = arg[len("--reboot-volume=") :]
+                if int(arg) < 0 or int(arg) > 100:
+                    raise Exception(
+                        "Reboot volume value out of range. Valid range is 0-100."
+                    )
+                else:
+                    self.reboot_volume = int(arg)
+            except Exception as e:
+                print("Setting default reboot volume of 25:", e)
+                self.reboot_volume = 25
         self.initUI()
 
     def initUI(self):
@@ -570,8 +577,9 @@ class App(QMainWindow):
         if self.combo_box.currentIndex() == device.index:
             self.play_button.setEnabled(True)
             self.stop_button.setEnabled(True)
-        self.set_volume_label(REBOOT_VOLUME * 100)
-        d.volume(REBOOT_VOLUME)
+        if device.index == self.combo_box.currentIndex():
+            self.set_volume_label(self.reboot_volume)
+        d.volume(self.reboot_volume / 100)
 
     def on_remove_device(self, ip):
         d = self.get_device_from_ip(ip)
