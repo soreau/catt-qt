@@ -306,9 +306,11 @@ class App(QMainWindow):
         self.setGeometry(640, 480, self.width, self.height)
         status_message = "Scanning network for Chromecast devices.."
         print(status_message)
-        splash = QSplashScreen(QPixmap(os.path.dirname(os.path.realpath(__file__)) + "/splash.png"))
+        splash = QSplashScreen(
+            QPixmap(os.path.dirname(os.path.realpath(__file__)) + "/splash.png")
+        )
         splash.show()
-        splash.showMessage(status_message, Qt.AlignBottom)
+        splash.showMessage(status_message, Qt.AlignBottom | Qt.AlignCenter)
         self.devices = catt.api.discover()
         num_devices = len(self.devices)
         if num_devices == 0:
