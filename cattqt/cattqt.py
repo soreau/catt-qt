@@ -309,6 +309,7 @@ class App(QMainWindow):
         splash = QSplashScreen(
             QPixmap(os.path.dirname(os.path.realpath(__file__)) + "/splash.png")
         )
+        splash.setEnabled(False)
         splash.show()
         splash.showMessage(status_message, Qt.AlignBottom | Qt.AlignCenter)
         self.devices = catt.api.discover()
