@@ -344,10 +344,9 @@ class App(QMainWindow):
             cast.register_connection_listener(device.connection_listener)
             self.device_list.append(device)
             self.combo_box.addItem(d.name)
-            # Hack: Change volume slightly to trigger
-            # status listener. This way, we can get the
-            # volume on startup.
-            d.volumedown(0.0000001)
+            device.volume = cast.status.volume_level * 100
+            if i == 0:
+                device.set_dial_value()
             print(d.name)
             i = i + 1
         self.combo_box.currentIndexChanged.connect(self.on_index_changed)
