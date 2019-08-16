@@ -15,12 +15,6 @@ Features:
 * Play/Pause/Stop/Seek/Volume/Reboot
 * Multi-platform
 
-Limitations:
-
-
-* Takes about 8 seconds to scan for chromecasts when started
-* Services that require login or complicated clicks in browser to play need to be started from a browser or other device
-
 Install:
 --------
 
