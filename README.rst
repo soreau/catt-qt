@@ -1,6 +1,7 @@
-**catt-qt** is a control GUI for Chromecasts.
+catt-qt
+=======
 
-Written using catt api, pychromecast and Qt.
+A control GUI for Chromecasts written using catt api, pychromecast and Qt.
 
 Features:
 ---------
