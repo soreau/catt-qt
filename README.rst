@@ -1,3 +1,4 @@
+**catt-qt** is a control GUI for Chromecasts.
 
 catt-qt
 =======
