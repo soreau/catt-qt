@@ -476,7 +476,9 @@ class App(QMainWindow):
         d = self.get_device_from_index(i)
         if d == None:
             return
-        d.device.seek(d.device._cast.media_controller.status.duration - 3)
+        duration = d.device._cast.media_controller.status.duration
+        if duration:
+            d.device.seek(duration - 3)
 
     def on_dial_moved(self):
         i = self.combo_box.currentIndex()
@@ -519,7 +521,8 @@ class App(QMainWindow):
         if d.media_listener.supports_seek:
             v = self.progress_slider.value()
             self.stop_timer.emit(i)
-            if v != int(d.device._cast.media_controller.status.duration):
+            duration = d.device._cast.media_controller.status.duration
+            if duration and v != int(duration):
                 self.seek(d, v)
 
     def on_progress_pressed(self):
