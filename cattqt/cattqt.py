@@ -19,7 +19,6 @@ class Device:
     def __init__(self, s, d, c, i):
         self.media_listener = MediaListener()
         self.media_listener._self = s
-        self.media_listener.supports_seek = False
         self.media_listener.index = i
         self.status_listener = StatusListener()
         self.status_listener._self = s
@@ -44,24 +43,23 @@ class Device:
         self.progress_timer.timeout.connect(self.on_progress_tick)
 
     def on_progress_tick(self):
-        _self = self._self
+        s = self._self
         self.time = self.time.addSecs(1)
         duration = self.device._cast.media_controller.status.duration
         if duration and duration != 0 and time_to_seconds(self.time) >= int(duration):
             # If progress is at the end, stop the device progress timer
             self.set_state_idle(self.index)
-            if _self.combo_box.currentIndex() == self.index:
+            if s.combo_box.currentIndex() == self.index:
                 # If it is the currently selected device, update the ui
                 self.update_ui_idle()
-        if _self.combo_box.currentIndex() == self.index:
+        if s.combo_box.currentIndex() == self.index:
             # Update the ui elements using current progress time
-            _self.progress_label.setText(self.time.toString("hh:mm:ss"))
-            _self.set_progress(time_to_seconds(self.time))
+            s.progress_label.setText(self.time.toString("hh:mm:ss"))
+            s.set_progress(time_to_seconds(self.time))
 
     def set_state_playing(self, i, time):
         s = self._self
-        hours, minutes, seconds = self.split_seconds(int(time))
-        s.set_time(i, hours, minutes, seconds)
+        s.set_time(i, int(time))
         self.paused = False
         self.playing = True
         if self.live:
@@ -89,8 +87,7 @@ class Device:
 
     def set_state_paused(self, i, time):
         s = self._self
-        hours, minutes, seconds = self.split_seconds(int(time))
-        s.set_time(i, hours, minutes, seconds)
+        s.set_time(i, int(time))
         s.stop_timer.emit(i)
         self.paused = True
         self.playing = True
@@ -190,11 +187,15 @@ class ComboBox(QComboBox):
 
     def reboot_device(self):
         d = self._self.stop("Rebooting..")
-        print(d.device.name, "rebooting")
-        self._self.play_button.setEnabled(False)
-        self._self.stop_button.setEnabled(False)
-        d.rebooting = True
-        d.cast.reboot()
+        try:
+            d.cast.reboot()
+            print(d.device.name, "rebooting")
+            self._self.play_button.setEnabled(False)
+            self._self.stop_button.setEnabled(False)
+            d.rebooting = True
+        except:
+            print(d.device.name, "reboot failed")
+            pass
 
 
 class Dial(QDial):
@@ -405,7 +406,10 @@ class App(QMainWindow):
             return
         if d.paused or d.live:
             if d.playing and not d.live:
-                d.device.play()
+                try:
+                    d.device.play()
+                except:
+                    pass
                 self.set_icon(self.play_button, "SP_MediaPause")
                 d.paused = False
                 return
@@ -416,7 +420,10 @@ class App(QMainWindow):
                 self.play(d, self.textbox.text())
                 return
             self.set_icon(self.play_button, "SP_MediaPlay")
-            d.device.pause()
+            try:
+                d.device.pause()
+            except:
+                pass
             d.paused = True
             d.progress_timer.stop()
 
@@ -518,27 +525,32 @@ class App(QMainWindow):
             return
         if d.muted:
             d.device.volume(d.unmute_volume / 100)
-            d.muted = False
         else:
             d.unmute_volume = d.device._cast.status.volume_level * 100
             d.device.volume(0.0)
-            d.muted = True
 
     def seek(self, d, value):
         self.status_label.setText("Seeking..")
-        d.device.seek(value)
+        try:
+            d.device.seek(value)
+        except:
+            pass
 
     def on_progress_value_changed(self):
         i = self.combo_box.currentIndex()
         d = self.get_device_from_index(i)
         if d.progress_clicked:
             return
-        if d.media_listener.supports_seek:
+        if d.device._cast.media_controller.status.supports_seek:
             v = self.progress_slider.value()
             self.stop_timer.emit(i)
+            self.set_time(i, v)
+            self.progress_label.setText(d.time.toString("hh:mm:ss"))
             duration = d.device._cast.media_controller.status.duration
             if duration and v != int(duration):
                 self.seek(d, v)
+        else:
+            print("Stream does not support seeking")
 
     def on_progress_pressed(self):
         i = self.combo_box.currentIndex()
@@ -556,8 +568,10 @@ class App(QMainWindow):
             return
         value = self.progress_slider.value()
         d.progress_clicked = False
-        if d.media_listener.supports_seek:
+        if d.device._cast.media_controller.status.supports_seek:
             if value > self.current_progress or value < self.current_progress:
+                self.set_time(i, value)
+                self.progress_label.setText(d.time.toString("hh:mm:ss"))
                 self.seek(d, value)
         else:
             print("Stream does not support seeking")
@@ -574,10 +588,11 @@ class App(QMainWindow):
             return
         d.progress_timer.stop()
 
-    def set_time(self, i, h, m, s):
+    def set_time(self, i, t):
         d = self.get_device_from_index(i)
         if d == None:
             return
+        h, m, s = d.split_seconds(t)
         d.time.setHMS(h, m, s)
 
     def set_icon(self, button, icon):
@@ -664,15 +679,9 @@ class App(QMainWindow):
         return None
 
     def set_progress(self, v):
-        try:
-            self.progress_slider.valueChanged.disconnect(self.on_progress_value_changed)
-        except:
-            pass
+        self.progress_slider.blockSignals(True)
         self.progress_slider.setValue(v)
-        try:
-            self.progress_slider.valueChanged.connect(self.on_progress_value_changed)
-        except:
-            pass
+        self.progress_slider.blockSignals(False)
 
     def set_volume_label(self, v):
         self.volume_label.setText(self.volume_prefix + str(round(v)))
@@ -685,7 +694,6 @@ class MediaListener:
         index = self.index
         if index == -1:
             return
-        self.supports_seek = status.supports_seek
         if i != index:
             d = s.get_device_from_index(index)
             if d == None:
@@ -731,14 +739,20 @@ class StatusListener:
         d = s.get_device_from_index(i)
         if d == None:
             return
+        v = round(status.volume_level * 100)
+        if d.muted and v != 0:
+            d.muted = False
+            print("muted:", d.muted)
+        elif not d.muted and v == 0:
+            d.muted = True
+            print("muted:", d.muted)
         if not s.volume_status_event_pending:
             d.set_dial_value()
         else:
-            v = status.volume_level * 100
             s.set_volume_label(v)
-            if round(v) > 0:
+            if v > 0:
                 d.muted = False
-        s.volume_status_event_pending = False
+            s.volume_status_event_pending = False
 
 
 class ConnectionListener:
