@@ -742,10 +742,8 @@ class StatusListener:
         v = round(status.volume_level * 100)
         if d.muted and v != 0:
             d.muted = False
-            print("muted:", d.muted)
         elif not d.muted and v == 0:
             d.muted = True
-            print("muted:", d.muted)
         if not s.volume_status_event_pending:
             d.set_dial_value()
         else:
