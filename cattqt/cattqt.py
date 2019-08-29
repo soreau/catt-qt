@@ -2,13 +2,14 @@
 
 import os
 import sys
+import math
 import catt.api
 import subprocess
 from catt.api import CattDevice
 import pychromecast
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
-from PyQt5.QtCore import Qt, QTimer, QTime, QThread, pyqtSignal
+from PyQt5.QtCore import Qt, QPoint, QTimer, QTime, QThread, pyqtSignal
 
 
 def time_to_seconds(time):
@@ -209,16 +210,156 @@ class Dial(QDial):
 
 
 class SplashScreen(QSplashScreen):
-    painted = False
+    def __init__(self, pixmap, s):
+        super(SplashScreen, self).__init__(pixmap)
+        self.setWindowFlags(Qt.FramelessWindowHint)
+        self.setAttribute(Qt.WA_TranslucentBackground)
+        self.setEnabled(False)
+        self.painted = False
+        self.version = s.version
+        self.message = s.init_message
+        self.showMessage(self.message)
+        self.animation_radian = 0.0
+        self.animation_radian = 0.0
+        self.animation_frame_timer = QTimer()
+        self.animation_trigger_timer = QTimer()
+        self.animation_trigger_timer.setSingleShot(True)
+        self.animation_frame_timer.timeout.connect(self.on_animation_frame)
+        self.animation_trigger_timer.timeout.connect(self.on_animation_trigger)
 
-    def paintEvent(self, event):
-        QSplashScreen.paintEvent(self, event)
+    def on_animation_frame(self):
+        self.animation_radian = (
+            self.animation_radian
+            + (3.0 - (math.cos(self.animation_radian) + 1.1)) * 0.05
+        )
+        if self.animation_radian >= math.radians(360):
+            self.animation_frame_timer.stop()
+            self.animation_trigger_timer.start(1000)
+            self.animation_radian = 0.0
+        self.update()
+
+    def on_animation_trigger(self):
+        self.animation_frame_timer.start(16)
+
+    def drawContents(self, painter):
+        w = painter.device().width()
+        h = painter.device().height()
+        painter.setRenderHint(QPainter.Antialiasing)
+        roundRectPath = QPainterPath()
+        roundRectPath.moveTo(0.0, 30.0)
+        roundRectPath.arcTo(0.0, 0.0, 60.0, 60.0, 180.0, -90.0)
+        roundRectPath.lineTo(290.0, 0.0)
+        roundRectPath.arcTo(260.0, 0.0, 60.0, 60.0, 90.0, -90.0)
+        roundRectPath.lineTo(320.0, 210.0)
+        roundRectPath.arcTo(260.0, 180.0, 60.0, 60.0, 0.0, -90.0)
+        roundRectPath.lineTo(30.0, 240.0)
+        roundRectPath.arcTo(0.0, 180.0, 60.0, 60.0, 270.0, -90.0)
+        roundRectPath.closeSubpath()
+        painter.setPen(
+            QPen(QColor(0, 0, 0, 0), 1.0, Qt.SolidLine, Qt.RoundCap, Qt.RoundJoin)
+        )
+        brush = QLinearGradient(0, 0, 0, 100)
+        brush.setColorAt(0.0, QColor(0, 0, 0, 127))
+        painter.setBrush(brush)
+        painter.drawPath(roundRectPath)
+        qt_green = QColor(65, 205, 82)
+        painter.setPen(QPen(qt_green, 1.0, Qt.SolidLine, Qt.RoundCap, Qt.RoundJoin))
+        brush.setColorAt(0.0, qt_green)
+        painter.setBrush(brush)
+        hw = w / 2
+        hh = h / 2
+        head_width = 90
+        head_height = 70
+        animation_w = 10
+        animation_h = 3
+        angle = -self.animation_radian - math.radians(90)
+        left_ear_tip_x = (math.cos(angle) * animation_w) + (
+            (hw - head_width) + animation_w
+        )
+        left_ear_tip_y = (math.sin(angle) * animation_h) + (15 + animation_h)
+        angle = self.animation_radian - math.radians(90)
+        right_ear_tip_x = (math.cos(angle) * animation_w) + (
+            (hw + head_width) - animation_w
+        )
+        right_ear_tip_y = (math.sin(angle) * animation_h) + (15 + animation_h)
+        earsPath = QPainterPath()
+        earsPath.moveTo((hw - head_width) + 5, hh)
+        earsPath.lineTo(left_ear_tip_x, left_ear_tip_y)
+        earsPath.lineTo(hw, hh - 50)
+        earsPath.lineTo(right_ear_tip_x, right_ear_tip_y)
+        earsPath.lineTo((hw + head_width) - 5, hh)
+        earsPath.closeSubpath()
+        painter.drawPath(earsPath)
+        headPath = QPainterPath()
+        headPath.moveTo(hw + head_width, hh)
+        headPath.arcTo(
+            hw - head_width,
+            hh - head_height,
+            head_width * 2,
+            head_height * 2,
+            0.0,
+            360.0,
+        )
+        painter.drawPath(headPath)
+        QSplashScreen.drawContents(self, painter)
+        status_text_size = painter.fontMetrics().size(0, self.message)
+        painter.setPen(QPen(Qt.white, 1.0, Qt.SolidLine, Qt.RoundCap, Qt.RoundJoin))
+        painter.drawStaticText(
+            QPoint(
+                hw - status_text_size.width() / 2, h - status_text_size.height() * 2
+            ),
+            QStaticText(self.message),
+        )
+        font = QFont()
+        font.setPixelSize(75)
+        font.setStyleStrategy(QFont.PreferAntialias)
+        painter.setFont(font)
+        qt_metrics = painter.fontMetrics()
+        qt_text_size = qt_metrics.size(0, "Qt")
+        painter.drawStaticText(
+            QPoint(hw - qt_text_size.width() / 2, hh - qt_text_size.height() / 2),
+            QStaticText("Qt"),
+        )
+        font.setPixelSize(25)
+        painter.setFont(font)
+        version_metrics = painter.fontMetrics()
+        version_text_size = version_metrics.size(0, "v" + self.version)
+        version_pos = QPoint(
+            hw + qt_text_size.width() / 2 + version_text_size.width() / 2,
+            ((hh - qt_text_size.width() / 2) + qt_metrics.ascent())
+            - (version_metrics.ascent()),
+        )
+        painter.setPen(QPen(Qt.black, 1.0, Qt.SolidLine, Qt.RoundCap, Qt.RoundJoin))
+        painter.drawStaticText(
+            QPoint(version_pos.x() + 1, version_pos.y() + 1),
+            QStaticText("v" + self.version),
+        )
+        painter.setPen(QPen(Qt.white, 1.0, Qt.SolidLine, Qt.RoundCap, Qt.RoundJoin))
+        painter.drawStaticText(version_pos, QStaticText("v" + self.version))
         self.painted = True
+
+    def showMessage(self, message, alignment=Qt.AlignLeft, color=Qt.black):
+        pass
 
     def ensure_first_paint(self):
         while not self.painted:
             QThread.usleep(250)
             QApplication.processEvents()
+        self.animation_trigger_timer.start(1000)
+
+    def finish(self, s):
+        self.animation_trigger_timer.stop()
+        self.animation_frame_timer.stop()
+        QSplashScreen.finish(self, s)
+
+
+class DiscoverThread(QThread):
+    def __init__(self, s):
+        super(DiscoverThread, self).__init__(s)
+        self.s = s
+
+    def run(self):
+        self.s.devices = catt.api.discover()
 
 
 class App(QMainWindow):
@@ -291,13 +432,14 @@ class App(QMainWindow):
         self.status_label.setAlignment(Qt.AlignCenter)
         self.status_layout.addWidget(self.status_label)
 
-    def __init__(self, app):
+    def __init__(self, app, version):
         super().__init__()
         self.title = "Cast All The Things"
         self.init_message = "Scanning network for Chromecast devices.."
         self.app = app
         self.width = 640
         self.height = 1
+        self.version = version
         self.reboot_volume = 25
         if len(sys.argv) == 2 and sys.argv[1].startswith("--reboot-volume="):
             try:
@@ -315,15 +457,15 @@ class App(QMainWindow):
         self.initUI()
 
     def initUI(self):
-        self.splash = SplashScreen(
-            QPixmap(os.path.dirname(os.path.realpath(__file__)) + "/splash.png")
-        )
+        self.splash = SplashScreen(QPixmap(320, 240), self)
         self.splash.show()
-        self.splash.setEnabled(False)
-        self.splash.showMessage(self.init_message, Qt.AlignBottom | Qt.AlignCenter)
         self.splash.ensure_first_paint()
         print(self.init_message)
-        self.devices = catt.api.discover()
+        splash_thread = DiscoverThread(self)
+        splash_thread.start()
+        while splash_thread.isRunning():
+            QThread.usleep(250)
+            QApplication.processEvents()
         num_devices = len(self.devices)
         if num_devices == 0:
             self.splash.finish(self)
@@ -764,11 +906,11 @@ class ConnectionListener:
             _self.remove_device.emit(status.address.address)
 
 
-def main() -> None:
+def main(version) -> None:
     app = QApplication(sys.argv)
-    ex = App(app)
+    ex = App(app, version)
     sys.exit(app.exec_())
 
 
 if __name__ == "__main__":
-    main()
+    main("X.X")

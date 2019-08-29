@@ -10,10 +10,10 @@ if sys.version_info.major < 3:
     sys.exit(1)
 
 
-def main() -> None:
-    cattqt.main()
-
-
 __author__ = "Scott Moreau"
 __email__ = "oreaus@gmail.com"
 __version__ = "1.8"
+
+
+def main() -> None:
+    cattqt.main(__version__)
