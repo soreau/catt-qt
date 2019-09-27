@@ -29,23 +29,31 @@ Run:
 * Optionally specify --reconnect-volume with range of 0-100: ``catt-qt --reconnect-volume=25``
 * By default, in the event of reconnect, the volume will be set to the volume before disconnect
 
+Screenshots:
+------------
 
-.. image:: https://github.com/soreau/catt-qt/blob/master/screenshots/x11.png
-   :target: https://github.com/soreau/catt-qt/blob/master/screenshots/x11.png
+
+.. image:: https://raw.githubusercontent.com/soreau/catt-qt/master/screenshots/splashscreen.png
+   :target: https://raw.githubusercontent.com/soreau/catt-qt/master/screenshots/splashscreen.png
+   :alt: SplashScreen
+
+
+.. image:: https://raw.githubusercontent.com/soreau/catt-qt/master/screenshots/x11.png
+   :target: https://raw.githubusercontent.com/soreau/catt-qt/master/screenshots/x11.png
    :alt: X11
 
 
-.. image:: https://github.com/soreau/catt-qt/blob/master/screenshots/wayland.png
-   :target: https://github.com/soreau/catt-qt/blob/master/screenshots/wayland.png
+.. image:: https://raw.githubusercontent.com/soreau/catt-qt/master/screenshots/wayland.png
+   :target: https://raw.githubusercontent.com/soreau/catt-qt/master/screenshots/wayland.png
    :alt: Wayland
 
 
-.. image:: https://github.com/soreau/catt-qt/blob/master/screenshots/osx.png
-   :target: https://github.com/soreau/catt-qt/blob/master/screenshots/osx.png
+.. image:: https://raw.githubusercontent.com/soreau/catt-qt/master/screenshots/osx.png
+   :target: https://raw.githubusercontent.com/soreau/catt-qt/master/screenshots/osx.png
    :alt: OSX
 
 
-.. image:: https://github.com/soreau/catt-qt/blob/master/screenshots/windows.png
-   :target: https://github.com/soreau/catt-qt/blob/master/screenshots/windows.png
+.. image:: https://raw.githubusercontent.com/soreau/catt-qt/master/screenshots/windows.png
+   :target: https://raw.githubusercontent.com/soreau/catt-qt/master/screenshots/windows.png
    :alt: Windows
 
