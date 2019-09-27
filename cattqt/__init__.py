@@ -12,7 +12,7 @@ if sys.version_info.major < 3:
 
 __author__ = "Scott Moreau"
 __email__ = "oreaus@gmail.com"
-__version__ = "1.9"
+__version__ = "2.0"
 
 
 def main() -> None:
