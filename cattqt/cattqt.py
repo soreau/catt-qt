@@ -538,6 +538,8 @@ class App(QMainWindow):
         if text == "" or (
             not "://" in text and not ":\\" in text and not text.startswith("/")
         ):
+            self.status_label.setText("Failed to play, please use full path")
+            print("Failed to play, please include full path")
             return
         self.status_label.setText("Playing..")
         subprocess.Popen(["catt", "-d", d.device.name, "cast", text])
