@@ -19,14 +19,15 @@ Install:
 --------
 
 
-* ``pip3 install cattqt`` will install from `pypi <https://pypi.org/project/cattqt/>`_
+* ``pip3 install cattqt``
 
 Run:
 ----
 
 
 * ``catt-qt``
-* Optionally specify --reboot-volume with range of 0-100: ``catt-qt --reboot-volume=25``
+* Optionally specify --reconnect-volume with range of 0-100: ``catt-qt --reconnect-volume=25``
+* By default, in the event of reconnect, the volume will be set to the volume before disconnect
 
 
 .. image:: https://github.com/soreau/catt-qt/blob/master/screenshots/x11.png

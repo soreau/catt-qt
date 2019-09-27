@@ -33,6 +33,7 @@ class Device:
         self.live = False
         self.muted = False
         self.unmute_volume = 0
+        self.disconnect_volume = 0
         self.paused = True
         self.playing = False
         self.stopping = False
@@ -440,20 +441,19 @@ class App(QMainWindow):
         self.width = 640
         self.height = 1
         self.version = version
-        self.reboot_volume = 25
-        if len(sys.argv) == 2 and sys.argv[1].startswith("--reboot-volume="):
+        self.reconnect_volume = -1
+        if len(sys.argv) == 2 and sys.argv[1].startswith("--reconnect-volume="):
             try:
                 arg = sys.argv[1]
-                arg = arg[len("--reboot-volume=") :]
+                arg = arg[len("--reconnect-volume=") :]
                 if int(arg) < 0 or int(arg) > 100:
                     raise Exception(
-                        "Reboot volume value out of range. Valid range is 0-100."
+                        "Reconnect volume value out of range. Valid range is 0-100."
                     )
                 else:
-                    self.reboot_volume = int(arg)
+                    self.reconnect_volume = int(arg)
             except Exception as e:
                 print(e)
-                print("Setting default reboot volume of 25")
         self.initUI()
 
     def initUI(self):
@@ -515,6 +515,7 @@ class App(QMainWindow):
             cast.media_controller.register_status_listener(device.media_listener)
             cast.register_status_listener(device.status_listener)
             cast.register_connection_listener(device.connection_listener)
+            device.disconnect_volume = round(cast.status.volume_level * 100)
             self.device_list.append(device)
             self.combo_box.addItem(d.name)
             if i == 0:
@@ -746,6 +747,7 @@ class App(QMainWindow):
     def on_add_device(self, ip):
         for d in self.device_list:
             if d.device.ip_addr == ip:
+                last_volume = d.disconnect_volume
                 self.devices.remove(d.device)
                 self.device_list.remove(d)
                 break
@@ -760,9 +762,16 @@ class App(QMainWindow):
         if self.combo_box.currentIndex() == device.index:
             self.play_button.setEnabled(True)
             self.stop_button.setEnabled(True)
-        if device.index == self.combo_box.currentIndex():
-            self.set_volume_label(self.reboot_volume)
-        d.volume(self.reboot_volume / 100)
+        d.disconnect_volume = round(device.cast.status.volume_level * 100)
+        if self.reconnect_volume == -1:
+            if last_volume != round(device.cast.status.volume_level * 100):
+                d.volume(last_volume / 100)
+                if device.index == self.combo_box.currentIndex():
+                    self.set_volume_label(last_volume)
+        else:
+            d.volume(self.reconnect_volume / 100)
+            if device.index == self.combo_box.currentIndex():
+                self.set_volume_label(self.reconnect_volume)
 
     def on_remove_device(self, ip):
         d = self.get_device_from_ip(ip)
@@ -882,6 +891,7 @@ class StatusListener:
         if d == None:
             return
         v = round(status.volume_level * 100)
+        d.disconnect_volume = v
         if d.muted and v != 0:
             d.muted = False
         elif not d.muted and v == 0:
