@@ -764,7 +764,7 @@ class App(QMainWindow):
         if self.combo_box.currentIndex() == device.index:
             self.play_button.setEnabled(True)
             self.stop_button.setEnabled(True)
-        d.disconnect_volume = round(device.cast.status.volume_level * 100)
+        device.disconnect_volume = round(device.cast.status.volume_level * 100)
         if self.reconnect_volume == -1:
             if last_volume != round(device.cast.status.volume_level * 100):
                 d.volume(last_volume / 100)
