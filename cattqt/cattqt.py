@@ -515,7 +515,7 @@ class App(QMainWindow):
             cast.media_controller.register_status_listener(device.media_listener)
             cast.register_status_listener(device.status_listener)
             cast.register_connection_listener(device.connection_listener)
-            device.disconnect_volume = round(cast.status.volume_level * 100)
+            device.disconnect_volume = round(cast.media_controller.status.volume_level * 100)
             self.device_list.append(device)
             self.combo_box.addItem(d.name)
             if i == 0:
@@ -764,9 +764,10 @@ class App(QMainWindow):
         if self.combo_box.currentIndex() == device.index:
             self.play_button.setEnabled(True)
             self.stop_button.setEnabled(True)
-        device.disconnect_volume = round(device.cast.status.volume_level * 100)
+        v = device.cast.media_controller.status.volume_level
+        device.disconnect_volume = round(v * 100)
         if self.reconnect_volume == -1:
-            if last_volume != round(device.cast.status.volume_level * 100):
+            if last_volume != round(v * 100):
                 d.volume(last_volume / 100)
                 if device.index == self.combo_box.currentIndex():
                     self.set_volume_label(last_volume)
