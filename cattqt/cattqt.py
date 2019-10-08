@@ -819,6 +819,9 @@ class App(QMainWindow):
         self.on_index_changed()
         if not devices_active:
             self.status_label.setText("Listening for " + lost_devices)
+            self.skip_forward_button.setEnabled(False)
+            self.play_button.setEnabled(False)
+            self.stop_button.setEnabled(False)
 
     def get_device_from_ip(self, ip):
         for d in self.device_list:
