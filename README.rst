@@ -29,6 +29,12 @@ Run:
 * Optionally specify ``--reconnect-volume`` with range of 0-100: ``catt-qt --reconnect-volume=25``
 * By default, in the event of reconnect, the volume will be set to the volume before disconnect
 
+Update:
+--------
+
+
+* ``pip3 install --no-cache-dir cattqt``
+
 Screenshots:
 ------------
 
