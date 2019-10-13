@@ -894,12 +894,12 @@ class StatusListener:
         index = self.index
         if index == -1:
             return
+        d = s.get_device_from_index(i)
+        if d == None:
+            return
         v = round(status.volume_level * 100)
         d.disconnect_volume = v
         if i != index:
-            return
-        d = s.get_device_from_index(i)
-        if d == None:
             return
         if d.muted and v != 0:
             d.muted = False
