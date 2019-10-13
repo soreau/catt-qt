@@ -764,6 +764,8 @@ class App(QMainWindow):
         if self.combo_box.currentIndex() == device.index:
             self.play_button.setEnabled(True)
             self.stop_button.setEnabled(True)
+        self.volume_label.setEnabled(True)
+        self.dial.setEnabled(True)
         device.disconnect_volume = last_volume
         if self.reconnect_volume == -1:
             if last_volume != round(device.cast.status.volume_level * 100):
@@ -821,6 +823,8 @@ class App(QMainWindow):
             self.skip_forward_button.setEnabled(False)
             self.play_button.setEnabled(False)
             self.stop_button.setEnabled(False)
+            self.volume_label.setEnabled(False)
+            self.dial.setEnabled(False)
 
     def get_device_from_ip(self, ip):
         for d in self.device_list:
