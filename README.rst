@@ -26,7 +26,7 @@ Run:
 
 
 * ``catt-qt``
-* Optionally specify --reconnect-volume with range of 0-100: ``catt-qt --reconnect-volume=25``
+* Optionally specify ``--reconnect-volume`` with range of 0-100: ``catt-qt --reconnect-volume=25``
 * By default, in the event of reconnect, the volume will be set to the volume before disconnect
 
 Screenshots:
