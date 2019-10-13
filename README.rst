@@ -33,7 +33,7 @@ Update:
 --------
 
 
-* ``pip3 install --no-cache-dir cattqt``
+* ``pip3 install --no-cache-dir --upgrade cattqt``
 
 Screenshots:
 ------------
