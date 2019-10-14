@@ -348,10 +348,10 @@ class SplashScreen(QSplashScreen):
             QApplication.processEvents()
         self.animation_trigger_timer.start(1000)
 
-    def finish(self, s):
+    def finish(self):
         self.animation_trigger_timer.stop()
         self.animation_frame_timer.stop()
-        QSplashScreen.finish(self, s)
+        self.close()
 
 
 class DiscoverThread(QThread):
@@ -433,6 +433,16 @@ class App(QMainWindow):
         self.status_label.setAlignment(Qt.AlignCenter)
         self.status_layout.addWidget(self.status_label)
 
+    def resource_path(self, relative_path):
+        try:
+            # PyInstaller creates a temp folder and stores path in _MEIPASS
+            base_path = sys._MEIPASS
+        except Exception:
+            # Load from directory of script in case of pip
+            base_path = os.path.dirname(os.path.realpath(__file__))
+
+        return os.path.join(base_path, relative_path)
+
     def __init__(self, app, version):
         super().__init__()
         self.title = "Cast All The Things"
@@ -456,8 +466,7 @@ class App(QMainWindow):
                 print(e)
         self.initUI()
 
-    def initUI(self):
-        self.splash = SplashScreen(QPixmap(320, 240), self)
+    def discover_loop(self):
         self.splash.show()
         self.splash.ensure_first_paint()
         print(self.init_message)
@@ -466,9 +475,9 @@ class App(QMainWindow):
         while splash_thread.isRunning():
             QThread.usleep(250)
             QApplication.processEvents()
-        num_devices = len(self.devices)
-        if num_devices == 0:
-            self.splash.finish(self)
+        self.num_devices = len(self.devices)
+        if self.num_devices == 0:
+            self.splash.hide()
             print("No devices found")
             reply = QMessageBox.question(
                 self,
@@ -478,14 +487,18 @@ class App(QMainWindow):
                 QMessageBox.Yes,
             )
             if reply == QMessageBox.Yes:
-                self.initUI()
+                self.discover_loop()
                 return
             else:
                 sys.exit(1)
+
+    def initUI(self):
+        self.splash = SplashScreen(QPixmap(320, 240), self)
+        self.icon = QIcon(self.resource_path("chromecast.png"))
+        self.splash.setWindowIcon(self.icon)
+        self.discover_loop()
         self.setWindowTitle(self.title)
-        self.setWindowIcon(
-            QIcon(os.path.dirname(os.path.realpath(__file__)) + "/chromecast.png")
-        )
+        self.setWindowIcon(self.icon)
         self.setGeometry(640, 480, self.width, self.height)
         self.window = QWidget()
         self.main_layout = QVBoxLayout()
@@ -502,11 +515,11 @@ class App(QMainWindow):
         self.stopping_timer_cancel.connect(self.on_stopping_timer_cancel)
         self.textbox_return = False
         self.device_list = []
-        if num_devices > 1:
+        if self.num_devices > 1:
             text = "devices found"
         else:
             text = "device found"
-        print(num_devices, text)
+        print(self.num_devices, text)
         i = 0
         for d in self.devices:
             cast = pychromecast.Chromecast(d.ip_addr)
@@ -532,7 +545,7 @@ class App(QMainWindow):
         self.widget.setLayout(self.main_layout)
         self.setCentralWidget(self.widget)
         self.show()
-        self.splash.finish(self)
+        self.splash.finish()
 
     def play(self, d, text):
         if text == "" or (
@@ -930,6 +943,9 @@ def main(version) -> None:
     ex = App(app, version)
     sys.exit(app.exec_())
 
+author = "Scott Moreau"
+email = "oreaus@gmail.com"
+version = "2.4"
 
 if __name__ == "__main__":
-    main("X.X")
+    main(version)
