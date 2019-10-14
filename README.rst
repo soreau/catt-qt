@@ -23,7 +23,7 @@ Download:
 * OSX_
 * Linux_
 .. _Windows: https://github.com/soreau/catt-qt/raw/master/dist/windows/cattqt.exe
-.. _OSX: https://github.com/soreau/catt-qt/raw/master/dist/osx/cattqt.app
+.. _OSX: https://github.com/soreau/catt-qt/raw/master/dist/osx/cattqt.zip
 .. _Linux: https://github.com/soreau/catt-qt/raw/master/dist/linux/cattqt
 
 Install from PyPi:
