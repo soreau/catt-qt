@@ -19,7 +19,10 @@ Install:
 --------
 
 
-* ``pip3 install cattqt``
+* `Windows<https://github.com/soreau/catt-qt/raw/master/dist/windows/cattqt.exe>`_.
+* `OSX<https://github.com/soreau/catt-qt/raw/master/dist/osx/cattqt.app>`_.
+* `Linux<https://github.com/soreau/catt-qt/raw/master/dist/linux/cattqt>`_.
+* Pip can be used on any platform: ``pip3 install cattqt``
 
 Run:
 ----
