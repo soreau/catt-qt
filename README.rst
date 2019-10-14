@@ -19,9 +19,12 @@ Install:
 --------
 
 
-* ``Windows<https://github.com/soreau/catt-qt/raw/master/dist/windows/cattqt.exe>``
-* ``OSX<https://github.com/soreau/catt-qt/raw/master/dist/osx/cattqt.app>``
-* ``Linux<https://github.com/soreau/catt-qt/raw/master/dist/linux/cattqt>``
+* Windows_
+.. _Windows: <https://github.com/soreau/catt-qt/raw/master/dist/windows/cattqt.exe>
+* OSX_
+.. _OSX: <https://github.com/soreau/catt-qt/raw/master/dist/osx/cattqt.app>
+* Linux_
+.. _Linux: <https://github.com/soreau/catt-qt/raw/master/dist/linux/cattqt>
 * Pip can be used on any platform: ``pip3 install cattqt``
 
 Run:
