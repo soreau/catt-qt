@@ -945,7 +945,7 @@ def main(version) -> None:
 
 author = "Scott Moreau"
 email = "oreaus@gmail.com"
-version = "2.4"
+version = "2.5"
 
 if __name__ == "__main__":
     main(version)
