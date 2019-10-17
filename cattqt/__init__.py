@@ -13,5 +13,6 @@ __author__ = cattqt.author
 __email__ = cattqt.email
 __version__ = cattqt.version
 
+
 def main() -> None:
     cattqt.main(__version__)

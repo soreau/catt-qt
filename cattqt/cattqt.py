@@ -943,6 +943,7 @@ def main(version) -> None:
     ex = App(app, version)
     sys.exit(app.exec_())
 
+
 author = "Scott Moreau"
 email = "oreaus@gmail.com"
 version = "2.5"
