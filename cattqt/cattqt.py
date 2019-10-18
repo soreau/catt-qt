@@ -403,8 +403,13 @@ class App(QMainWindow):
         self.stop_button.clicked.connect(self.on_stop_click)
         self.set_icon(self.stop_button, "SP_MediaStop")
         self.stop_button.setToolTip("Stop")
+        self.file_button = QPushButton()
+        self.file_button.clicked.connect(self.on_file_click)
+        self.set_icon(self.file_button, "SP_DirClosedIcon")
+        self.file_button.setToolTip("Choose File")
         self.control_layout.addWidget(self.play_button)
         self.control_layout.addWidget(self.stop_button)
+        self.control_layout.addWidget(self.file_button)
         self.control_layout.addWidget(self.textbox)
         self.volume_layout.addWidget(self.dial)
         self.volume_layout.addWidget(self.volume_label)
@@ -621,6 +626,10 @@ class App(QMainWindow):
         self.play_button.setEnabled(True)
         d.stopping = True
         d.device.stop()
+
+    def on_file_click(self):
+        path, _ = QFileDialog.getOpenFileName()
+        self.textbox.setText(path)
 
     def on_index_changed(self):
         i = self.combo_box.currentIndex()
