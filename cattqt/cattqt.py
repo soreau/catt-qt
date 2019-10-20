@@ -3,13 +3,14 @@
 import os
 import sys
 import math
+import signal
 import catt.api
 import subprocess
 from catt.api import CattDevice
 import pychromecast
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
-from PyQt5.QtCore import Qt, QPoint, QTimer, QTime, QThread, pyqtSignal
+from PyQt5.QtCore import Qt, QDir, QPoint, QTimer, QTime, QThread, pyqtSignal
 
 
 def time_to_seconds(time):
@@ -38,6 +39,11 @@ class Device:
         self.playing = False
         self.stopping = False
         self.rebooting = False
+        self.catt_process = None
+        self.directory = None
+        self.filename = None
+        self.last_title = None
+        self.playback_starting = False
         self.stopping_timer = None
         self.progress_clicked = False
         self.progress_timer = QTimer()
@@ -120,8 +126,7 @@ class Device:
         s.progress_slider.setEnabled(False)
         s.progress_label.setText(self.time.toString("hh:mm:ss"))
         s.set_icon(s.play_button, "SP_MediaPlay")
-        if s.status_label.text() != "Playing..":
-            self.update_text()
+        self.update_text()
 
     def set_dial_value(self):
         s = self._self
@@ -148,7 +153,11 @@ class Device:
             prefix = "Streaming"
         elif not self.playing:
             if not self.stopping and not self.rebooting:
-                s.status_label.setText("Idle")
+                if self.playback_starting == False and (
+                    self.device._cast.media_controller.status.title != self.last_title
+                    or self.last_title == None
+                ):
+                    s.status_label.setText("Idle")
             elif self.stopping:
                 s.status_label.setText("Stopping..")
             elif self.rebooting:
@@ -171,6 +180,16 @@ class Device:
             s.status_label.setText(prefix + title)
         else:
             s.status_label.setText(prefix)
+
+    def kill_catt_process(self):
+        if self.catt_process == None:
+            return
+        try:
+            os.kill(self.catt_process.pid, signal.SIGINT)
+            self.catt_process.wait()
+        except:
+            pass
+        self.catt_process = None
 
 
 class ComboBox(QComboBox):
@@ -368,6 +387,8 @@ class App(QMainWindow):
     stop_timer = pyqtSignal(int)
     add_device = pyqtSignal(str)
     remove_device = pyqtSignal(str)
+    stop_click = pyqtSignal()
+    play_next = pyqtSignal(Device)
     stopping_timer_cancel = pyqtSignal(int)
 
     def create_devices_layout(self):
@@ -454,7 +475,7 @@ class App(QMainWindow):
         self.init_message = "Scanning network for Chromecast devices.."
         self.app = app
         self.width = 640
-        self.height = 1
+        self.height = 180
         self.version = version
         self.reconnect_volume = -1
         if len(sys.argv) == 2 and sys.argv[1].startswith("--reconnect-volume="):
@@ -469,6 +490,7 @@ class App(QMainWindow):
                     self.reconnect_volume = int(arg)
             except Exception as e:
                 print(e)
+        app.aboutToQuit.connect(self.clean_up)
         self.initUI()
 
     def discover_loop(self):
@@ -504,7 +526,7 @@ class App(QMainWindow):
         self.discover_loop()
         self.setWindowTitle(self.title)
         self.setWindowIcon(self.icon)
-        self.setGeometry(640, 480, self.width, self.height)
+        self.setGeometry(0, 0, self.width, self.height)
         self.window = QWidget()
         self.main_layout = QVBoxLayout()
         self.create_devices_layout()
@@ -517,8 +539,9 @@ class App(QMainWindow):
         self.stop_timer.connect(self.on_stop_timer)
         self.add_device.connect(self.on_add_device)
         self.remove_device.connect(self.on_remove_device)
+        self.stop_click.connect(self.on_stop_click)
+        self.play_next.connect(self.on_play_next)
         self.stopping_timer_cancel.connect(self.on_stopping_timer_cancel)
-        self.textbox_return = False
         self.device_list = []
         if self.num_devices > 1:
             text = "devices found"
@@ -534,6 +557,7 @@ class App(QMainWindow):
             cast.register_status_listener(device.status_listener)
             cast.register_connection_listener(device.connection_listener)
             device.disconnect_volume = round(cast.status.volume_level * 100)
+            device.filename = d._cast.media_controller.title
             self.device_list.append(device)
             self.combo_box.addItem(d.name)
             if i == 0:
@@ -549,18 +573,56 @@ class App(QMainWindow):
         self.widget = QWidget()
         self.widget.setLayout(self.main_layout)
         self.setCentralWidget(self.widget)
+        fg = self.frameGeometry()
+        fg.moveCenter(QDesktopWidget().availableGeometry().center())
+        self.move(fg.topLeft())
         self.show()
         self.splash.finish()
+
+    def clean_up(self):
+        for d in self.device_list:
+            d.kill_catt_process()
+
+    def on_play_next(self, d):
+        if d.filename == None or d.directory == None:
+            return
+
+        paths = []
+        for root, directories, files in os.walk(d.directory):
+            for f in files:
+                paths.append(f)
+            break
+
+        paths.sort()
+
+        i = paths.index(d.filename)
+
+        if i >= len(paths) - 1:
+            d.filename = d.directory = None
+            return
+
+        i = i + 1
+
+        text = os.path.join(root, paths[i])
+        self.play(d, text)
+        self.textbox.setText(text)
 
     def play(self, d, text):
         if text == "" or (
             not "://" in text and not ":\\" in text and not text.startswith("/")
         ):
-            self.status_label.setText("Failed to play, please use full path")
-            print("Failed to play, please include full path")
+            self.status_label.setText("Failed to play, please include full path")
+            print('Failed to play "%s" please include full path' % text)
             return
+        d.kill_catt_process()
         self.status_label.setText("Playing..")
-        subprocess.Popen(["catt", "-d", d.device.name, "cast", text])
+        if not "://" in text:
+            d.filename = os.path.basename(text)
+            d.directory = os.path.dirname(text)
+            if d.last_title == d.filename:
+                d.last_title = None
+        d.playback_starting = True
+        d.catt_process = subprocess.Popen(["catt", "-d", d.device.name, "cast", text])
 
     def on_play_click(self):
         i = self.combo_box.currentIndex()
@@ -578,10 +640,6 @@ class App(QMainWindow):
                 return
             self.play(d, self.textbox.text())
         elif d.playing:
-            if self.textbox_return:
-                self.textbox_return = False
-                self.play(d, self.textbox.text())
-                return
             self.set_icon(self.play_button, "SP_MediaPlay")
             try:
                 d.device.pause()
@@ -591,22 +649,20 @@ class App(QMainWindow):
             d.progress_timer.stop()
 
     def on_textbox_return(self):
-        self.textbox_return = True
-        self.on_play_click()
+        i = self.combo_box.currentIndex()
+        d = self.get_device_from_index(i)
+        if d == None:
+            return
+        self.play(d, self.textbox.text())
 
     def on_stopping_timer_cancel(self, i):
-        i = self.combo_box.currentIndex()
         d = self.get_device_from_index(i)
         if d == None:
             return
         d.stopping_timer.stop()
         d.stopping_timer = None
 
-    def on_stopping_timeout(self):
-        i = self.combo_box.currentIndex()
-        d = self.get_device_from_index(i)
-        if d == None:
-            return
+    def on_stopping_timeout(self, d):
         d.stopping = False
         d.update_text()
 
@@ -618,18 +674,31 @@ class App(QMainWindow):
         d.set_state_idle(i)
         self.status_label.setText(text)
         d.update_ui_idle()
+        d.kill_catt_process()
         return d
 
     def on_stop_click(self):
-        d = self.stop("Stopping..")
-        d.stopping_timer = QTimer.singleShot(3000, self.on_stopping_timeout)
-        self.play_button.setEnabled(True)
+        i = self.combo_box.currentIndex()
+        d = self.get_device_from_index(i)
+        if d == None:
+            return
         d.stopping = True
+        self.stop("Stopping..")
+        d.playback_starting = False
+        if d.stopping_timer != None:
+            d.stopping_timer.stop()
+        d.stopping_timer = QTimer.singleShot(3000, lambda: self.on_stopping_timeout(d))
+        self.play_button.setEnabled(True)
         d.device.stop()
 
     def on_file_click(self):
+        i = self.combo_box.currentIndex()
+        d = self.get_device_from_index(i)
         path, _ = QFileDialog.getOpenFileName()
-        self.textbox.setText(path)
+        path = QDir.toNativeSeparators(path)
+        if path:
+            self.textbox.setText(path)
+            self.play(d, path)
 
     def on_index_changed(self):
         i = self.combo_box.currentIndex()
@@ -805,15 +874,16 @@ class App(QMainWindow):
             return
         try:
             d.cast.media_controller._status_listeners.remove(d.media_listener)
-        except Exception as e:
-            print(ip, "Unregistering media controller failed:", e)
+        except:
+            pass
         try:
             d.cast.socket_client.receiver_controller._status_listeners.remove(
                 d.status_listener
             )
-        except Exception as e:
-            print(ip, "Unregistering status listener failed:", e)
+        except:
+            pass
         self.stop_timer.emit(d.index)
+        d.kill_catt_process()
         d.time.setHMS(0, 0, 0)
         d.playing = False
         d.paused = True
@@ -880,33 +950,66 @@ class MediaListener:
             d = s.get_device_from_index(index)
             if d == None:
                 return
-            d.stopping = False
-            d.rebooting = False
-            if status.player_state == "PLAYING":
-                d.live = status.stream_type == "LIVE"
-                d.set_state_playing(index, status.current_time)
-            elif status.player_state == "PAUSED":
-                d.set_state_paused(index, status.current_time)
-            elif status.player_state == "IDLE" or status.player_state == "UNKNOWN":
-                d.set_state_idle(index)
+            self.handle_media_status(s, d, index, status, False)
             return
         d = s.get_device_from_index(i)
         if d == None:
             return
-        d.stopping = False
-        d.rebooting = False
         if d.stopping_timer:
             s.stopping_timer_cancel.emit(i)
+        self.handle_media_status(s, d, i, status, True)
+
+    def handle_media_status(self, s, d, i, status, update_ui):
+        d.stopping = False
+        d.rebooting = False
+        if d.catt_process != None and d.catt_process.poll() != None:
+            d.catt_process.wait()
+            d.catt_process = None
+        if (
+            d.filename != None
+            and d.playback_starting == False
+            and (
+                (status.idle_reason == "FINISHED" and status.title == d.filename)
+                or (status.title != None and status.title != d.filename)
+                or (status.title == None)
+            )
+        ):
+            d.kill_catt_process()
+            if status.idle_reason == "FINISHED":
+                s.stop_click.emit()
+                s.play_next.emit(d)
+            else:
+                d.filename = None
+                d.directory = None
+        if (
+            d.playback_starting == True
+            and status.title != None
+            and status.title != d.last_title
+        ):
+            if status.player_state != "IDLE":
+                d.playback_starting = False
+            if status.idle_reason == "ERROR":
+                s.stop_click.emit()
+                s.play_next.emit(d)
+        if (
+            status.title != None
+            and status.player_state != "IDLE"
+            and status.player_state != "BUFFERING"
+        ):
+            d.last_title = status.title
         if status.player_state == "PLAYING":
             d.live = status.stream_type == "LIVE"
             d.set_state_playing(i, status.current_time)
-            d.update_ui_playing(status.current_time, status.duration)
+            if update_ui:
+                d.update_ui_playing(status.current_time, status.duration)
         elif status.player_state == "PAUSED":
             d.set_state_paused(i, status.current_time)
-            d.update_ui_paused(status.current_time, status.duration)
+            if update_ui:
+                d.update_ui_paused(status.current_time, status.duration)
         elif status.player_state == "IDLE" or status.player_state == "UNKNOWN":
             d.set_state_idle(i)
-            d.update_ui_idle()
+            if update_ui:
+                d.update_ui_idle()
 
 
 class StatusListener:
@@ -938,24 +1041,25 @@ class StatusListener:
 
 class ConnectionListener:
     def new_connection_status(self, status):
-        _self = self._self
+        s = self._self
         if status.status == "CONNECTED":
             print(status.address.address, "connected")
-            _self.add_device.emit(status.address.address)
+            s.add_device.emit(status.address.address)
         elif status.status == "LOST":
             print(status.address.address, "disconnected")
-            _self.remove_device.emit(status.address.address)
-
-
-def main(version) -> None:
-    app = QApplication(sys.argv)
-    ex = App(app, version)
-    sys.exit(app.exec_())
+            s.remove_device.emit(status.address.address)
 
 
 author = "Scott Moreau"
 email = "oreaus@gmail.com"
 version = "2.5"
 
+
+def main() -> None:
+    app = QApplication(sys.argv)
+    ex = App(app, version)
+    sys.exit(app.exec_())
+
+
 if __name__ == "__main__":
-    main(version)
+    main()

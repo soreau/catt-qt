@@ -15,4 +15,4 @@ __version__ = cattqt.version
 
 
 def main() -> None:
-    cattqt.main(__version__)
+    cattqt.main()
