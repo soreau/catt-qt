@@ -44,10 +44,20 @@ class Device:
         self.filename = None
         self.last_title = None
         self.playback_starting = False
-        self.stopping_timer = None
+        self.playback_just_started = False
+        self.stopping_timer = QTimer()
+        self.starting_timer = QTimer()
+        self.just_started_timer = QTimer()
         self.progress_clicked = False
+        self.catt_read_thread = None
         self.progress_timer = QTimer()
         self.time = QTime(0, 0, 0)
+        self.stopping_timer.timeout.connect(lambda: s.on_stopping_timeout(self))
+        self.starting_timer.timeout.connect(lambda: s.on_starting_timeout(self))
+        self.just_started_timer.timeout.connect(lambda: s.on_just_started_timeout(self))
+        self.stopping_timer.setSingleShot(True)
+        self.starting_timer.setSingleShot(True)
+        self.just_started_timer.setSingleShot(True)
         self.progress_timer.timeout.connect(self.on_progress_tick)
 
     def on_progress_tick(self):
@@ -184,6 +194,8 @@ class Device:
     def kill_catt_process(self):
         if self.catt_process == None:
             return
+        if self.catt_read_thread != None:
+            self.catt_read_thread.cancel()
         try:
             os.kill(self.catt_process.pid, signal.SIGINT)
             self.catt_process.wait()
@@ -382,14 +394,35 @@ class DiscoverThread(QThread):
         self.s.devices = catt.api.discover()
 
 
+class CattReadThread(QThread):
+    def __init__(self, s, d, stdout):
+        super(CattReadThread, self).__init__(s)
+        self.s = s
+        self.d = d
+        self.stdout = stdout
+        self.canceled = False
+
+    def run(self):
+        for line in iter(self.stdout.readline, ""):
+            if b"Playing" in line or self.canceled == True:
+                break
+        if self.canceled == False:
+            print("run: start_singleshot_timer.emit")
+            self.s.start_singleshot_timer.emit(self.d)
+
+    def cancel(self):
+        self.canceled = True
+
+
 class App(QMainWindow):
-    start_timer = pyqtSignal(int)
-    stop_timer = pyqtSignal(int)
-    add_device = pyqtSignal(str)
-    remove_device = pyqtSignal(str)
-    stop_click = pyqtSignal()
+    stop_call = pyqtSignal(Device)
     play_next = pyqtSignal(Device)
+    add_device = pyqtSignal(str)
+    stop_timer = pyqtSignal(int)
+    start_timer = pyqtSignal(int)
+    remove_device = pyqtSignal(str)
     stopping_timer_cancel = pyqtSignal(int)
+    start_singleshot_timer = pyqtSignal(Device)
 
     def create_devices_layout(self):
         self.devices_layout = QHBoxLayout()
@@ -539,9 +572,10 @@ class App(QMainWindow):
         self.stop_timer.connect(self.on_stop_timer)
         self.add_device.connect(self.on_add_device)
         self.remove_device.connect(self.on_remove_device)
-        self.stop_click.connect(self.on_stop_click)
+        self.stop_call.connect(self.on_stop_call)
         self.play_next.connect(self.on_play_next)
         self.stopping_timer_cancel.connect(self.on_stopping_timer_cancel)
+        self.start_singleshot_timer.connect(self.on_start_singleshot_timer)
         self.device_list = []
         if self.num_devices > 1:
             text = "devices found"
@@ -607,6 +641,20 @@ class App(QMainWindow):
         self.play(d, text)
         self.textbox.setText(text)
 
+    def on_start_singleshot_timer(self, d):
+        d.playback_just_started = True
+        d.just_started_timer.start(2000)
+
+    def on_just_started_timeout(self, d):
+        d.playback_just_started = False
+
+    def on_starting_timeout(self, d):
+        if d.playback_starting == True:
+            d.kill_catt_process()
+            d.playback_starting = False
+            self.on_stop_call(d)
+            self.on_play_next(d)
+
     def play(self, d, text):
         if text == "" or (
             not "://" in text and not ":\\" in text and not text.startswith("/")
@@ -621,8 +669,22 @@ class App(QMainWindow):
             d.directory = os.path.dirname(text)
             if d.last_title == d.filename:
                 d.last_title = None
-        d.playback_starting = True
-        d.catt_process = subprocess.Popen(["catt", "-d", d.device.name, "cast", text])
+            d.playback_just_started = d.playback_starting = True
+            d.just_started_timer.start(2000)
+            d.starting_timer.start(10000)
+            d.catt_process = subprocess.Popen(
+                ["catt", "-d", d.device.name, "cast", text], stdout=subprocess.PIPE
+            )
+            d.catt_read_thread = CattReadThread(self, d, d.catt_process.stdout)
+            d.catt_read_thread.start()
+        else:
+            d.filename = None
+            d.directory = None
+            d.just_started_timer.stop()
+            d.starting_timer.stop()
+            d.catt_process = subprocess.Popen(
+                ["catt", "-d", d.device.name, "cast", text]
+            )
 
     def on_play_click(self):
         i = self.combo_box.currentIndex()
@@ -660,18 +722,13 @@ class App(QMainWindow):
         if d == None:
             return
         d.stopping_timer.stop()
-        d.stopping_timer = None
 
     def on_stopping_timeout(self, d):
         d.stopping = False
         d.update_text()
 
-    def stop(self, text):
-        i = self.combo_box.currentIndex()
-        d = self.get_device_from_index(i)
-        if d == None:
-            return
-        d.set_state_idle(i)
+    def stop(self, d, text):
+        d.set_state_idle(d.index)
         self.status_label.setText(text)
         d.update_ui_idle()
         d.kill_catt_process()
@@ -683,11 +740,17 @@ class App(QMainWindow):
         if d == None:
             return
         d.stopping = True
-        self.stop("Stopping..")
+        self.stop(d, "Stopping..")
         d.playback_starting = False
-        if d.stopping_timer != None:
-            d.stopping_timer.stop()
-        d.stopping_timer = QTimer.singleShot(3000, lambda: self.on_stopping_timeout(d))
+        d.stopping_timer.start(3000)
+        self.play_button.setEnabled(True)
+        d.device.stop()
+
+    def on_stop_call(self, d):
+        d.stopping = True
+        self.stop(d, "Stopping..")
+        d.playback_starting = False
+        d.stopping_timer.start(3000)
         self.play_button.setEnabled(True)
         d.device.stop()
 
@@ -955,41 +1018,39 @@ class MediaListener:
         d = s.get_device_from_index(i)
         if d == None:
             return
-        if d.stopping_timer:
-            s.stopping_timer_cancel.emit(i)
+        s.stopping_timer_cancel.emit(i)
         self.handle_media_status(s, d, i, status, True)
 
     def handle_media_status(self, s, d, i, status, update_ui):
         d.stopping = False
         d.rebooting = False
+        if (
+            d.filename != None
+            and d.playback_just_started == False
+            and status.title == None
+        ):
+            d.kill_catt_process()
+            d.filename = None
+            d.directory = None
+            d.playback_starting = False
         if d.catt_process != None and d.catt_process.poll() != None:
             d.catt_process.wait()
             d.catt_process = None
         if (
             d.filename != None
-            and d.playback_starting == False
-            and (
-                (status.idle_reason == "FINISHED" and status.title == d.filename)
-                or (status.title != None and status.title != d.filename)
-                or (status.title == None)
-            )
+            and status.idle_reason == "FINISHED"
+            and status.title == d.filename
         ):
             d.kill_catt_process()
-            if status.idle_reason == "FINISHED":
-                s.stop_click.emit()
-                s.play_next.emit(d)
-            else:
-                d.filename = None
-                d.directory = None
+            s.stop_call.emit(d)
+            s.play_next.emit(d)
         if (
             d.playback_starting == True
             and status.title != None
             and status.title != d.last_title
         ):
-            if status.player_state != "IDLE":
-                d.playback_starting = False
             if status.idle_reason == "ERROR":
-                s.stop_click.emit()
+                s.stop_call.emit(d)
                 s.play_next.emit(d)
         if (
             status.title != None
@@ -1019,13 +1080,19 @@ class StatusListener:
         index = self.index
         if index == -1:
             return
+        v = round(status.volume_level * 100)
+        if i != index:
+            d = s.get_device_from_index(index)
+            if d == None:
+                return
+            d.disconnect_volume = v
+            self.update_playback_starting_status(d, status)
+            return
         d = s.get_device_from_index(i)
         if d == None:
             return
-        v = round(status.volume_level * 100)
         d.disconnect_volume = v
-        if i != index:
-            return
+        self.update_playback_starting_status(d, status)
         if d.muted and v != 0:
             d.muted = False
         elif not d.muted and v == 0:
@@ -1037,6 +1104,22 @@ class StatusListener:
             if v > 0:
                 d.muted = False
             s.volume_status_event_pending = False
+
+    def update_playback_starting_status(self, d, status):
+        if (
+            d.filename != None
+            and status.status_text
+            and status.display_name == status.status_text
+            and status.display_name == "Default Media Receiver"
+        ):
+            d.playback_starting = True
+        elif (
+            d.filename != None
+            and status.status_text
+            and status.status_text[len("Casting: ") :] == d.filename
+            and status.display_name == "Default Media Receiver"
+        ):
+            d.playback_starting = False
 
 
 class ConnectionListener:
