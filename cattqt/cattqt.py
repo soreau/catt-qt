@@ -572,7 +572,7 @@ class App(QMainWindow):
         self.stop_timer.connect(self.on_stop_timer)
         self.add_device.connect(self.on_add_device)
         self.remove_device.connect(self.on_remove_device)
-        self.stop_call.connect(self.on_stop_call)
+        self.stop_call.connect(self.on_stop_signal)
         self.play_next.connect(self.on_play_next)
         self.stopping_timer_cancel.connect(self.on_stopping_timer_cancel)
         self.start_singleshot_timer.connect(self.on_start_singleshot_timer)
@@ -657,7 +657,7 @@ class App(QMainWindow):
         if d.playback_starting == True:
             d.kill_catt_process()
             d.playback_starting = False
-            self.on_stop_call(d)
+            self.on_stop_signal(d)
             self.on_play_next(d)
 
     def play(self, d, text):
@@ -739,25 +739,25 @@ class App(QMainWindow):
         d.kill_catt_process()
         return d
 
+    def on_stop(self, d):
+        d.stopping = True
+        self.stop(d, "Stopping..")
+        d.playback_starting = False
+        d.just_started_timer.stop()
+        d.starting_timer.stop()
+        d.stopping_timer.start(3000)
+        self.play_button.setEnabled(True)
+        d.device.stop()
+
     def on_stop_click(self):
         i = self.combo_box.currentIndex()
         d = self.get_device_from_index(i)
         if d == None:
             return
-        d.stopping = True
-        self.stop(d, "Stopping..")
-        d.playback_starting = False
-        d.stopping_timer.start(3000)
-        self.play_button.setEnabled(True)
-        d.device.stop()
+        self.on_stop(d)
 
-    def on_stop_call(self, d):
-        d.stopping = True
-        self.stop(d, "Stopping..")
-        d.playback_starting = False
-        d.stopping_timer.start(3000)
-        self.play_button.setEnabled(True)
-        d.device.stop()
+    def on_stop_signal(self, d):
+        self.on_stop(d)
 
     def on_file_click(self):
         i = self.combo_box.currentIndex()
