@@ -42,7 +42,6 @@ class Device:
         self.catt_process = None
         self.directory = None
         self.filename = None
-        self.last_title = None
         self.playback_starting = False
         self.playback_just_started = False
         self.stopping_timer = QTimer()
@@ -154,27 +153,10 @@ class Device:
         seconds = s - ((hours * 3600) + (minutes * 60))
         return hours, minutes, seconds
 
-    def update_text(self):
-        s = self._self
-        title = self.device._cast.media_controller.title
-        status_text = self.device._cast.status.status_text
+    def set_text(self, s, status_text, title):
         prefix = ""
         if self.live:
             prefix = "Streaming"
-        elif not self.playing:
-            if not self.stopping and not self.rebooting:
-                if self.playback_starting == False and (
-                    self.device._cast.media_controller.status.title != self.last_title
-                    or self.last_title == None
-                ):
-                    s.status_label.setText("Idle")
-            elif self.stopping:
-                s.status_label.setText("Stopping..")
-            elif self.rebooting:
-                s.status_label.setText("Rebooting..")
-            return
-        elif self.paused:
-            prefix = "Paused"
         if prefix and (status_text or title):
             prefix = prefix + " - "
         if status_text and title:
@@ -190,6 +172,24 @@ class Device:
             s.status_label.setText(prefix + title)
         else:
             s.status_label.setText(prefix)
+
+    def update_text(self):
+        title = self.device._cast.media_controller.title
+        status_text = self.device._cast.status.status_text
+        s = self._self
+        if not self.playing:
+            if self.stopping:
+                s.status_label.setText("Stopping..")
+            elif self.rebooting:
+                s.status_label.setText("Rebooting..")
+            elif status_text or title:
+                self.set_text(s, status_text, title)
+            elif (
+                self.playback_starting == False and self.playback_just_started == False
+            ):
+                s.status_label.setText("Idle")
+            return
+        self.set_text(s, status_text, title)
 
     def kill_catt_process(self):
         if self.catt_process == None:
@@ -672,8 +672,6 @@ class App(QMainWindow):
         if not "://" in text:
             d.filename = os.path.basename(text)
             d.directory = os.path.dirname(text)
-            if d.last_title == d.filename:
-                d.last_title = None
             d.playback_just_started = d.playback_starting = True
             d.just_started_timer.start(2000)
             d.starting_timer.start(10000)
@@ -1049,20 +1047,10 @@ class MediaListener:
             d.kill_catt_process()
             s.stop_call.emit(d)
             s.play_next.emit(d)
-        if (
-            d.playback_starting == True
-            and status.title != None
-            and status.title != d.last_title
-        ):
+        if d.playback_starting == True and status.title != None:
             if status.idle_reason == "ERROR":
                 s.stop_call.emit(d)
                 s.play_next.emit(d)
-        if (
-            status.title != None
-            and status.player_state != "IDLE"
-            and status.player_state != "BUFFERING"
-        ):
-            d.last_title = status.title
         if status.player_state == "PLAYING":
             d.live = status.stream_type == "LIVE"
             d.set_state_playing(i, status.current_time)
