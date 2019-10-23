@@ -1,7 +1,7 @@
 catt-qt
 =======
 
-A control GUI for Chromecasts written using catt api, pychromecast and Qt.
+A control GUI for Chromecasts written using python3, catt api, pychromecast and PyQt5.
 
 Features:
 ---------
@@ -9,9 +9,9 @@ Features:
 
 * Able to cast files, links and playlist urls
 * Control muliple chromecasts selectable from list
-* Get data in real time and shows changes from other devices
+* Get data in real time and see changes from other devices
 * Supports device reboot with initial volume setting
-* Manage streams started by other devices
+* Automatically plays files in same directory
 * Play/Pause/Stop/Seek/Volume/Reboot
 * Multi-platform
 
