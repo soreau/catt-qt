@@ -407,7 +407,6 @@ class CattReadThread(QThread):
             if b"Playing" in line or self.canceled == True:
                 break
         if self.canceled == False:
-            print("run: start_singleshot_timer.emit")
             self.s.start_singleshot_timer.emit(self.d)
 
     def cancel(self):
