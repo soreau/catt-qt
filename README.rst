@@ -32,7 +32,7 @@ Install from PyPi:
 ------------------
 
 
-* ``pip3 install cattqt``
+* ``pip3 install catt pychromecast PyQt5 cattqt``
 
 Run:
 ----
