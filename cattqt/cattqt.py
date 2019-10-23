@@ -524,6 +524,7 @@ class App(QMainWindow):
             except Exception as e:
                 print(e)
         app.aboutToQuit.connect(self.clean_up)
+        app.focusChanged.connect(self.focus_changed)
         self.initUI()
 
     def discover_loop(self):
@@ -612,6 +613,11 @@ class App(QMainWindow):
         self.move(fg.topLeft())
         self.show()
         self.splash.finish()
+        self.raise_()
+        self.activateWindow()
+
+    def focus_changed(self, event):
+        self.textbox.setFocus()
 
     def clean_up(self):
         for d in self.device_list:
