@@ -404,7 +404,11 @@ class CattReadThread(QThread):
 
     def run(self):
         for line in iter(self.stdout.readline, ""):
-            if b"Playing" in line or self.canceled == True:
+            if (
+                b"Playing" in line
+                or b"Serving local file" in line
+                or self.canceled == True
+            ):
                 break
         if self.canceled == False:
             self.s.start_singleshot_timer.emit(self.d)
