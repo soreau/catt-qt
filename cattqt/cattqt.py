@@ -822,8 +822,7 @@ class App(QMainWindow):
         duration = d.device._cast.media_controller.status.duration
         if d.filename != None:
             d.kill_catt_process()
-            d.starting_timer.stop()
-            d.just_started_timer.stop()
+            self.on_stop_click()
             d.playback_starting = False
             self.on_play_next(d)
         if duration:
