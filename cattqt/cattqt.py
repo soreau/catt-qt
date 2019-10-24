@@ -622,8 +622,21 @@ class App(QMainWindow):
         for d in self.device_list:
             d.kill_catt_process()
 
+    def file_exists(self, d):
+        if not os.path.exists(
+            os.path.join(d.directory, d.filename)
+        ) or not os.path.isfile(os.path.join(d.directory, d.filename)):
+            self.status_label.setText(
+                os.path.join(d.directory, d.filename) + " does not exist"
+            )
+            print(os.path.join(d.directory, d.filename), "does not exist")
+            return False
+        return True
+
     def on_play_next(self, d):
         if d.filename == None or d.directory == None:
+            return
+        if not self.file_exists(d):
             return
 
         paths = []
@@ -672,6 +685,8 @@ class App(QMainWindow):
         if not "://" in text:
             d.filename = os.path.basename(text)
             d.directory = os.path.dirname(text)
+            if not self.file_exists(d):
+                return
             d.playback_just_started = d.playback_starting = True
             d.just_started_timer.start(2000)
             d.starting_timer.start(10000)
@@ -801,6 +816,12 @@ class App(QMainWindow):
         if d == None:
             return
         duration = d.device._cast.media_controller.status.duration
+        if d.filename != None:
+            d.kill_catt_process()
+            d.starting_timer.stop()
+            d.just_started_timer.stop()
+            d.playback_starting = False
+            self.on_play_next(d)
         if duration:
             d.device.seek(duration - 3)
 
