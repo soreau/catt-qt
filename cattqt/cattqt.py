@@ -407,6 +407,7 @@ class CattReadThread(QThread):
             if (
                 b"Playing" in line
                 or b"Serving local file" in line
+                or b"Casting local file" in line
                 or self.canceled == True
             ):
                 break
