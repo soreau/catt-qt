@@ -685,6 +685,7 @@ class App(QMainWindow):
             self.status_label.setText("Failed to play, please include full path")
             print('Failed to play "%s" please include full path' % text)
             return
+        self.on_stop_signal(d)
         d.kill_catt_process()
         self.status_label.setText("Playing..")
         if not "://" in text:
