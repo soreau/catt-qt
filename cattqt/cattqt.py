@@ -688,6 +688,12 @@ class App(QMainWindow):
         self.on_stop_signal(d)
         d.kill_catt_process()
         self.status_label.setText("Playing..")
+        try:
+            catt = os.path.join(sys._MEIPASS, "catt")
+        except:
+            catt = "catt"
+        si = subprocess.STARTUPINFO()
+        si.dwFlags |= subprocess.STARTF_USESHOWWINDOW
         if not "://" in text:
             d.filename = os.path.basename(text)
             d.directory = os.path.dirname(text)
@@ -697,7 +703,7 @@ class App(QMainWindow):
             d.just_started_timer.start(2000)
             d.starting_timer.start(10000)
             d.catt_process = subprocess.Popen(
-                ["catt", "-d", d.device.name, "cast", text], stdout=subprocess.PIPE
+                [catt, "-d", d.device.name, "cast", text], close_fds=True, stdout=subprocess.PIPE, stdin=subprocess.PIPE, stderr=subprocess.PIPE, startupinfo=si
             )
             d.catt_read_thread = CattReadThread(self, d, d.catt_process.stdout)
             d.catt_read_thread.start()
@@ -707,7 +713,7 @@ class App(QMainWindow):
             d.just_started_timer.stop()
             d.starting_timer.stop()
             d.catt_process = subprocess.Popen(
-                ["catt", "-d", d.device.name, "cast", text]
+                [catt, "-d", d.device.name, "cast", text], close_fds=True, stdout=subprocess.PIPE, stdin=subprocess.PIPE, stderr=subprocess.PIPE, startupinfo=si
             )
 
     def on_play_click(self):
