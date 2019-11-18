@@ -219,12 +219,17 @@ class ComboBox(QComboBox):
             self.reboot_device()
 
     def reboot_device(self):
-        d = self._self.stop("Rebooting..")
+        s = self._self
+        i = s.combo_box.currentIndex()
+        d = s.get_device_from_index(i)
+        if d == None:
+            return
+        s.stop(d, "Rebooting..")
         try:
             d.cast.reboot()
             print(d.device.name, "rebooting")
-            self._self.play_button.setEnabled(False)
-            self._self.stop_button.setEnabled(False)
+            s.play_button.setEnabled(False)
+            s.stop_button.setEnabled(False)
             d.rebooting = True
         except:
             print(d.device.name, "reboot failed")
