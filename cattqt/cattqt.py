@@ -697,8 +697,6 @@ class App(QMainWindow):
             catt = os.path.join(sys._MEIPASS, "catt")
         except:
             catt = "catt"
-        si = subprocess.STARTUPINFO()
-        si.dwFlags |= subprocess.STARTF_USESHOWWINDOW
         if not "://" in text:
             d.filename = os.path.basename(text)
             d.directory = os.path.dirname(text)
@@ -707,19 +705,53 @@ class App(QMainWindow):
             d.playback_just_started = d.playback_starting = True
             d.just_started_timer.start(2000)
             d.starting_timer.start(10000)
-            d.catt_process = subprocess.Popen(
-                [catt, "-d", d.device.name, "cast", text], close_fds=True, stdout=subprocess.PIPE, stdin=subprocess.PIPE, stderr=subprocess.PIPE, startupinfo=si
-            )
-            d.catt_read_thread = CattReadThread(self, d, d.catt_process.stdout)
-            d.catt_read_thread.start()
+            try:
+                si = subprocess.STARTUPINFO()
+                si.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+                d.catt_process = subprocess.Popen(
+                    [catt, "-d", d.device.name, "cast", text],
+                    close_fds=True,
+                    stdout=subprocess.PIPE,
+                    stdin=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    startupinfo=si,
+                )
+                d.catt_read_thread = CattReadThread(self, d, d.catt_process.stdout)
+                d.catt_read_thread.start()
+            except:
+                d.catt_process = subprocess.Popen(
+                    [catt, "-d", d.device.name, "cast", text],
+                    close_fds=True,
+                    stdout=subprocess.PIPE,
+                    stdin=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                )
+                d.catt_read_thread = CattReadThread(self, d, d.catt_process.stdout)
+                d.catt_read_thread.start()
         else:
             d.filename = None
             d.directory = None
             d.just_started_timer.stop()
             d.starting_timer.stop()
-            d.catt_process = subprocess.Popen(
-                [catt, "-d", d.device.name, "cast", text], close_fds=True, stdout=subprocess.PIPE, stdin=subprocess.PIPE, stderr=subprocess.PIPE, startupinfo=si
-            )
+            try:
+                si = subprocess.STARTUPINFO()
+                si.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+                d.catt_process = subprocess.Popen(
+                    [catt, "-d", d.device.name, "cast", text],
+                    close_fds=True,
+                    stdout=subprocess.PIPE,
+                    stdin=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    startupinfo=si,
+                )
+            except:
+                d.catt_process = subprocess.Popen(
+                    [catt, "-d", d.device.name, "cast", text],
+                    close_fds=True,
+                    stdout=subprocess.PIPE,
+                    stdin=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                )
 
     def on_play_click(self):
         i = self.combo_box.currentIndex()
