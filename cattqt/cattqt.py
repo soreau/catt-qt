@@ -170,8 +170,10 @@ class Device:
             s.status_label.setText(prefix + status_text)
         elif title:
             s.status_label.setText(prefix + title)
-        else:
+        elif prefix:
             s.status_label.setText(prefix)
+        else:
+            s.status_label.setText("Idle")
 
     def update_text(self):
         title = self.device._cast.media_controller.title
@@ -182,12 +184,13 @@ class Device:
                 s.status_label.setText("Stopping..")
             elif self.rebooting:
                 s.status_label.setText("Rebooting..")
-            elif status_text or title:
-                self.set_text(s, status_text, title)
             elif (
                 self.playback_starting == False and self.playback_just_started == False
             ):
                 s.status_label.setText("Idle")
+                s.set_icon(s.play_button, "SP_MediaPlay")
+            else:
+                self.set_text(s, status_text, title)
             return
         self.set_text(s, status_text, title)
 
@@ -792,7 +795,8 @@ class App(QMainWindow):
 
     def on_stopping_timeout(self, d):
         d.stopping = False
-        d.update_text()
+        d.set_state_idle(d.index)
+        d.update_ui_idle()
 
     def stop(self, d, text):
         d.set_state_idle(d.index)
@@ -871,7 +875,10 @@ class App(QMainWindow):
             d.playback_starting = False
             self.on_play_next(d)
         if duration:
-            d.device.seek(duration - 3)
+            try:
+                d.device.seek(duration - 3)
+            except:
+                pass
 
     def on_dial_moved(self):
         i = self.combo_box.currentIndex()
