@@ -172,7 +172,7 @@ class Device:
             s.status_label.setText(prefix + title)
         elif prefix:
             s.status_label.setText(prefix)
-        else:
+        elif self.filename == None:
             s.status_label.setText("Idle")
 
     def update_text(self):
@@ -1127,6 +1127,10 @@ class MediaListener:
             if status.idle_reason == "ERROR":
                 s.stop_call.emit(d)
                 s.play_next.emit(d)
+        if d.filename == None and status.title == None:
+            d.set_state_idle(i)
+            if update_ui:
+                d.update_ui_idle()
         if status.player_state == "PLAYING":
             d.live = status.stream_type == "LIVE"
             d.set_state_playing(i, status.current_time)
