@@ -15,19 +15,6 @@ Features:
 * Play/Pause/Stop/Seek/Volume/Reboot
 * Multi-platform
 
-Download:
----------
-
-
-* Windows_
-* OSX_ - See this_ to learn how to add a security exception
-* Linux_
-
-.. _Windows: https://github.com/soreau/catt-qt/raw/master/dist/windows/cattqt.exe
-.. _OSX: https://github.com/soreau/catt-qt/raw/master/dist/osx/cattqt.zip
-.. _this: https://support.apple.com/en-us/HT202491
-.. _Linux: https://github.com/soreau/catt-qt/raw/master/dist/linux/cattqt
-
 Install from PyPi:
 ------------------
 
