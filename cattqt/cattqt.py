@@ -1,4 +1,4 @@
-# Copyright 2019 - Scott Moreau
+# Copyright 2020 - Scott Moreau
 
 import os
 import sys
