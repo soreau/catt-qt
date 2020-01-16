@@ -30,7 +30,7 @@ Run:
 * By default, in the event of reconnect, the volume will be set to the volume before disconnect
 
 Update:
---------
+-------
 
 
 * ``pip3 install --no-cache-dir --upgrade cattqt``
