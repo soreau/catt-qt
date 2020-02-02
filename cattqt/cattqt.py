@@ -186,7 +186,7 @@ class Device:
                 s.status_label.setText("Rebooting..")
             elif (
                 self.playback_starting == False and self.playback_just_started == False
-            ):
+            ) or s.status_label.text() == "Stopping..":
                 s.status_label.setText("Idle")
                 s.set_icon(s.play_button, "SP_MediaPlay")
             else:
@@ -794,9 +794,11 @@ class App(QMainWindow):
         d.stopping_timer.stop()
 
     def on_stopping_timeout(self, d):
+        i = self.combo_box.currentIndex()
         d.stopping = False
         d.set_state_idle(d.index)
-        d.update_ui_idle()
+        if i == d.index:
+            d.update_ui_idle()
 
     def stop(self, d, text):
         d.set_state_idle(d.index)
