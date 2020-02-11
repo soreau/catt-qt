@@ -1210,7 +1210,7 @@ class ConnectionListener:
 
 author = "Scott Moreau"
 email = "oreaus@gmail.com"
-version = "2.7"
+version = "2.8"
 
 
 def main() -> None:
