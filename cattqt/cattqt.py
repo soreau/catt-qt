@@ -629,7 +629,10 @@ class App(QMainWindow):
         self.activateWindow()
 
     def focus_changed(self, event):
-        self.textbox.setFocus()
+        try:
+            self.textbox.setFocus()
+        except:
+            pass
 
     def clean_up(self):
         for d in self.device_list:
