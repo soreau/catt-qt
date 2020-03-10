@@ -697,6 +697,7 @@ class App(QMainWindow):
             print('Failed to play "%s" please include full path' % text)
             return
         self.on_stop_signal(d)
+        d.stopping_timer.stop()
         d.kill_catt_process()
         self.status_label.setText("Playing..")
         try:
