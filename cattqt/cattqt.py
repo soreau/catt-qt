@@ -10,7 +10,7 @@ from catt.api import CattDevice
 import pychromecast
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
-from PyQt5.QtCore import Qt, QDir, QPoint, QTimer, QTime, QThread, pyqtSignal
+from PyQt5.QtCore import Qt, QDir, QPointF, QTimer, QTime, QThread, pyqtSignal
 
 
 def time_to_seconds(time):
@@ -345,8 +345,8 @@ class SplashScreen(QSplashScreen):
         status_text_size = painter.fontMetrics().size(0, self.message)
         painter.setPen(QPen(Qt.white, 1.0, Qt.SolidLine, Qt.RoundCap, Qt.RoundJoin))
         painter.drawStaticText(
-            QPoint(
-                int(hw - status_text_size.width() / 2), int(h - status_text_size.height() * 2)
+            QPointF(
+                hw - status_text_size.width() / 2, h - status_text_size.height() * 2
             ),
             QStaticText(self.message),
         )
@@ -357,21 +357,21 @@ class SplashScreen(QSplashScreen):
         qt_metrics = painter.fontMetrics()
         qt_text_size = qt_metrics.size(0, "Qt")
         painter.drawStaticText(
-            QPoint(int(hw - qt_text_size.width() / 2), int(hh - qt_text_size.height() / 2)),
+            QPointF(hw - qt_text_size.width() / 2, hh - qt_text_size.height() / 2),
             QStaticText("Qt"),
         )
         font.setPixelSize(25)
         painter.setFont(font)
         version_metrics = painter.fontMetrics()
         version_text_size = version_metrics.size(0, "v" + self.version)
-        version_pos = QPoint(
-            int(hw + qt_text_size.width() / 2 + version_text_size.width() / 2),
-            int(((hh - qt_text_size.width() / 2) + qt_metrics.ascent())
-            - (version_metrics.ascent())),
+        version_pos = QPointF(
+            hw + qt_text_size.width() / 2 + version_text_size.width() / 2,
+            ((hh - qt_text_size.width() / 2) + qt_metrics.ascent())
+            - (version_metrics.ascent()),
         )
         painter.setPen(QPen(Qt.black, 1.0, Qt.SolidLine, Qt.RoundCap, Qt.RoundJoin))
         painter.drawStaticText(
-            QPoint(version_pos.x() + 1, version_pos.y() + 1),
+            QPointF(version_pos.x() + 1, version_pos.y() + 1),
             QStaticText("v" + self.version),
         )
         painter.setPen(QPen(Qt.white, 1.0, Qt.SolidLine, Qt.RoundCap, Qt.RoundJoin))
