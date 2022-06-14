@@ -143,7 +143,7 @@ class Device:
         s.dial.valueChanged.disconnect(s.on_dial_moved)
         if v != 0:
             self.unmute_volume = v
-        s.dial.setValue(int(v))
+        s.dial.setValue(v)
         s.set_volume_label(v)
         s.dial.valueChanged.connect(s.on_dial_moved)
 
@@ -346,7 +346,7 @@ class SplashScreen(QSplashScreen):
         painter.setPen(QPen(Qt.white, 1.0, Qt.SolidLine, Qt.RoundCap, Qt.RoundJoin))
         painter.drawStaticText(
             QPoint(
-                int(hw - status_text_size.width() / 2), int(h - status_text_size.height() * 2)
+                hw - status_text_size.width() / 2, h - status_text_size.height() * 2
             ),
             QStaticText(self.message),
         )
@@ -357,7 +357,7 @@ class SplashScreen(QSplashScreen):
         qt_metrics = painter.fontMetrics()
         qt_text_size = qt_metrics.size(0, "Qt")
         painter.drawStaticText(
-            QPoint(int(hw - qt_text_size.width() / 2), int(hh - qt_text_size.height() / 2)),
+            QPoint(hw - qt_text_size.width() / 2, hh - qt_text_size.height() / 2),
             QStaticText("Qt"),
         )
         font.setPixelSize(25)
@@ -365,9 +365,9 @@ class SplashScreen(QSplashScreen):
         version_metrics = painter.fontMetrics()
         version_text_size = version_metrics.size(0, "v" + self.version)
         version_pos = QPoint(
-            int(hw + qt_text_size.width() / 2 + version_text_size.width() / 2),
-            int(((hh - qt_text_size.width() / 2) + qt_metrics.ascent())
-            - (version_metrics.ascent())),
+            hw + qt_text_size.width() / 2 + version_text_size.width() / 2,
+            ((hh - qt_text_size.width() / 2) + qt_metrics.ascent())
+            - (version_metrics.ascent()),
         )
         painter.setPen(QPen(Qt.black, 1.0, Qt.SolidLine, Qt.RoundCap, Qt.RoundJoin))
         painter.drawStaticText(
@@ -676,7 +676,6 @@ class App(QMainWindow):
         self.textbox.setText(text)
 
     def on_start_singleshot_timer(self, d):
-        d.playback_starting = False
         d.playback_just_started = True
         d.just_started_timer.start(2000)
 
@@ -1125,7 +1124,7 @@ class MediaListener:
         if (
             d.filename != None
             and status.idle_reason == "FINISHED"
-            and status.title == os.path.splitext(d.filename)[0]
+            and status.title == d.filename
         ):
             d.kill_catt_process()
             s.stop_call.emit(d)
@@ -1215,7 +1214,7 @@ class ConnectionListener:
 
 author = "Scott Moreau"
 email = "oreaus@gmail.com"
-version = "3.0"
+version = "2.9"
 
 
 def main() -> None:
