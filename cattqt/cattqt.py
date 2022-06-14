@@ -88,7 +88,7 @@ class Device:
     def update_ui_playing(self, time, duration):
         s = self._self
         if duration != None:
-            s.progress_slider.setMaximum(duration)
+            s.progress_slider.setMaximum(int(duration))
         if self.live:
             s.skip_forward_button.setEnabled(False)
             s.progress_slider.setEnabled(False)
@@ -112,7 +112,7 @@ class Device:
     def update_ui_paused(self, time, duration):
         s = self._self
         if duration != None:
-            s.progress_slider.setMaximum(duration)
+            s.progress_slider.setMaximum(int(duration))
         s.set_progress(time)
         s.skip_forward_button.setEnabled(True)
         s.progress_slider.setEnabled(True)
@@ -143,7 +143,7 @@ class Device:
         s.dial.valueChanged.disconnect(s.on_dial_moved)
         if v != 0:
             self.unmute_volume = v
-        s.dial.setValue(v)
+        s.dial.setValue(int(v))
         s.set_volume_label(v)
         s.dial.valueChanged.connect(s.on_dial_moved)
 
@@ -346,7 +346,7 @@ class SplashScreen(QSplashScreen):
         painter.setPen(QPen(Qt.white, 1.0, Qt.SolidLine, Qt.RoundCap, Qt.RoundJoin))
         painter.drawStaticText(
             QPoint(
-                hw - status_text_size.width() / 2, h - status_text_size.height() * 2
+                int(hw - status_text_size.width() / 2), int(h - status_text_size.height() * 2)
             ),
             QStaticText(self.message),
         )
@@ -357,7 +357,7 @@ class SplashScreen(QSplashScreen):
         qt_metrics = painter.fontMetrics()
         qt_text_size = qt_metrics.size(0, "Qt")
         painter.drawStaticText(
-            QPoint(hw - qt_text_size.width() / 2, hh - qt_text_size.height() / 2),
+            QPoint(int(hw - qt_text_size.width() / 2), int(hh - qt_text_size.height() / 2)),
             QStaticText("Qt"),
         )
         font.setPixelSize(25)
@@ -365,9 +365,9 @@ class SplashScreen(QSplashScreen):
         version_metrics = painter.fontMetrics()
         version_text_size = version_metrics.size(0, "v" + self.version)
         version_pos = QPoint(
-            hw + qt_text_size.width() / 2 + version_text_size.width() / 2,
-            ((hh - qt_text_size.width() / 2) + qt_metrics.ascent())
-            - (version_metrics.ascent()),
+            int(hw + qt_text_size.width() / 2 + version_text_size.width() / 2),
+            int(((hh - qt_text_size.width() / 2) + qt_metrics.ascent())
+            - (version_metrics.ascent())),
         )
         painter.setPen(QPen(Qt.black, 1.0, Qt.SolidLine, Qt.RoundCap, Qt.RoundJoin))
         painter.drawStaticText(
@@ -676,6 +676,7 @@ class App(QMainWindow):
         self.textbox.setText(text)
 
     def on_start_singleshot_timer(self, d):
+        d.playback_starting = False
         d.playback_just_started = True
         d.just_started_timer.start(2000)
 
@@ -697,6 +698,7 @@ class App(QMainWindow):
             print('Failed to play "%s" please include full path' % text)
             return
         self.on_stop_signal(d)
+        d.stopping_timer.stop()
         d.kill_catt_process()
         self.status_label.setText("Playing..")
         try:
@@ -1079,7 +1081,7 @@ class App(QMainWindow):
 
     def set_progress(self, v):
         self.progress_slider.blockSignals(True)
-        self.progress_slider.setValue(v)
+        self.progress_slider.setValue(int(v))
         self.progress_slider.blockSignals(False)
 
     def set_volume_label(self, v):
@@ -1123,7 +1125,7 @@ class MediaListener:
         if (
             d.filename != None
             and status.idle_reason == "FINISHED"
-            and status.title == d.filename
+            and status.title == os.path.splitext(d.filename)[0]
         ):
             d.kill_catt_process()
             s.stop_call.emit(d)
@@ -1213,7 +1215,7 @@ class ConnectionListener:
 
 author = "Scott Moreau"
 email = "oreaus@gmail.com"
-version = "2.9"
+version = "3.0"
 
 
 def main() -> None:
