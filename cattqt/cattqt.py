@@ -88,7 +88,7 @@ class Device:
     def update_ui_playing(self, time, duration):
         s = self._self
         if duration != None:
-            s.progress_slider.setMaximum(int(duration))
+            s.progress_slider.setMaximum(duration)
         if self.live:
             s.skip_forward_button.setEnabled(False)
             s.progress_slider.setEnabled(False)
@@ -112,7 +112,7 @@ class Device:
     def update_ui_paused(self, time, duration):
         s = self._self
         if duration != None:
-            s.progress_slider.setMaximum(int(duration))
+            s.progress_slider.setMaximum(duration)
         s.set_progress(time)
         s.skip_forward_button.setEnabled(True)
         s.progress_slider.setEnabled(True)
@@ -1080,7 +1080,7 @@ class App(QMainWindow):
 
     def set_progress(self, v):
         self.progress_slider.blockSignals(True)
-        self.progress_slider.setValue(int(v))
+        self.progress_slider.setValue(v)
         self.progress_slider.blockSignals(False)
 
     def set_volume_label(self, v):
