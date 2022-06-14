@@ -676,7 +676,6 @@ class App(QMainWindow):
         self.textbox.setText(text)
 
     def on_start_singleshot_timer(self, d):
-        d.playback_starting = False
         d.playback_just_started = True
         d.just_started_timer.start(2000)
 
@@ -1124,7 +1123,7 @@ class MediaListener:
         if (
             d.filename != None
             and status.idle_reason == "FINISHED"
-            and status.title == os.path.splitext(d.filename)[0]
+            and status.title == d.filename
         ):
             d.kill_catt_process()
             s.stop_call.emit(d)
@@ -1214,7 +1213,7 @@ class ConnectionListener:
 
 author = "Scott Moreau"
 email = "oreaus@gmail.com"
-version = "3.0"
+version = "2.9"
 
 
 def main() -> None:
