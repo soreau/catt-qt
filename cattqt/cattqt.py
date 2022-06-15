@@ -855,7 +855,7 @@ class App(QMainWindow):
         self.progress_slider.setEnabled(enabled)
         duration = d.device._cast.media_controller.status.duration
         if duration != None:
-            self.progress_slider.setMaximum(duration)
+            self.progress_slider.setMaximum(int(duration))
         self.set_progress(time_to_seconds(d.time))
         if d.live:
             self.play_button.setEnabled(True)
