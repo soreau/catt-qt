@@ -10,7 +10,7 @@ from catt.api import CattDevice
 import pychromecast
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
-from PyQt5.QtCore import Qt, QDir, QPoint, QTimer, QTime, QThread, pyqtSignal
+from PyQt5.QtCore import Qt, QDir, QPointF, QTimer, QTime, QThread, pyqtSignal
 
 
 def time_to_seconds(time):
@@ -88,7 +88,7 @@ class Device:
     def update_ui_playing(self, time, duration):
         s = self._self
         if duration != None:
-            s.progress_slider.setMaximum(duration)
+            s.progress_slider.setMaximum(int(duration))
         if self.live:
             s.skip_forward_button.setEnabled(False)
             s.progress_slider.setEnabled(False)
@@ -112,7 +112,7 @@ class Device:
     def update_ui_paused(self, time, duration):
         s = self._self
         if duration != None:
-            s.progress_slider.setMaximum(duration)
+            s.progress_slider.setMaximum(int(duration))
         s.set_progress(time)
         s.skip_forward_button.setEnabled(True)
         s.progress_slider.setEnabled(True)
@@ -143,7 +143,7 @@ class Device:
         s.dial.valueChanged.disconnect(s.on_dial_moved)
         if v != 0:
             self.unmute_volume = v
-        s.dial.setValue(v)
+        s.dial.setValue(int(v))
         s.set_volume_label(v)
         s.dial.valueChanged.connect(s.on_dial_moved)
 
@@ -345,7 +345,7 @@ class SplashScreen(QSplashScreen):
         status_text_size = painter.fontMetrics().size(0, self.message)
         painter.setPen(QPen(Qt.white, 1.0, Qt.SolidLine, Qt.RoundCap, Qt.RoundJoin))
         painter.drawStaticText(
-            QPoint(
+            QPointF(
                 hw - status_text_size.width() / 2, h - status_text_size.height() * 2
             ),
             QStaticText(self.message),
@@ -357,21 +357,21 @@ class SplashScreen(QSplashScreen):
         qt_metrics = painter.fontMetrics()
         qt_text_size = qt_metrics.size(0, "Qt")
         painter.drawStaticText(
-            QPoint(hw - qt_text_size.width() / 2, hh - qt_text_size.height() / 2),
+            QPointF(hw - qt_text_size.width() / 2, hh - qt_text_size.height() / 2),
             QStaticText("Qt"),
         )
         font.setPixelSize(25)
         painter.setFont(font)
         version_metrics = painter.fontMetrics()
         version_text_size = version_metrics.size(0, "v" + self.version)
-        version_pos = QPoint(
+        version_pos = QPointF(
             hw + qt_text_size.width() / 2 + version_text_size.width() / 2,
             ((hh - qt_text_size.width() / 2) + qt_metrics.ascent())
             - (version_metrics.ascent()),
         )
         painter.setPen(QPen(Qt.black, 1.0, Qt.SolidLine, Qt.RoundCap, Qt.RoundJoin))
         painter.drawStaticText(
-            QPoint(version_pos.x() + 1, version_pos.y() + 1),
+            QPointF(version_pos.x() + 1, version_pos.y() + 1),
             QStaticText("v" + self.version),
         )
         painter.setPen(QPen(Qt.white, 1.0, Qt.SolidLine, Qt.RoundCap, Qt.RoundJoin))
@@ -855,7 +855,7 @@ class App(QMainWindow):
         self.progress_slider.setEnabled(enabled)
         duration = d.device._cast.media_controller.status.duration
         if duration != None:
-            self.progress_slider.setMaximum(duration)
+            self.progress_slider.setMaximum(int(duration))
         self.set_progress(time_to_seconds(d.time))
         if d.live:
             self.play_button.setEnabled(True)
@@ -1081,7 +1081,7 @@ class App(QMainWindow):
 
     def set_progress(self, v):
         self.progress_slider.blockSignals(True)
-        self.progress_slider.setValue(v)
+        self.progress_slider.setValue(int(v))
         self.progress_slider.blockSignals(False)
 
     def set_volume_label(self, v):
