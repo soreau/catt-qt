@@ -4,13 +4,23 @@ import os
 import sys
 import math
 import signal
+import requests
 import catt.api
 import subprocess
 from catt.api import CattDevice
 import pychromecast
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
-from PyQt5.QtCore import Qt, QDir, QPointF, QTimer, QTime, QThread, pyqtSignal
+from PyQt5.QtCore import (
+    Qt,
+    QDir,
+    QPointF,
+    QTimer,
+    QTime,
+    QThread,
+    pyqtSignal,
+    QEventLoop,
+)
 
 
 def time_to_seconds(time):
@@ -62,7 +72,7 @@ class Device:
     def on_progress_tick(self):
         s = self._self
         self.time = self.time.addSecs(1)
-        duration = self.device._cast.media_controller.status.duration
+        duration = self.get_duration(self.cast.media_controller.status)
         if duration and duration != 0 and time_to_seconds(self.time) >= int(duration):
             # If progress is at the end, stop the device progress timer
             self.set_state_idle(self.index)
@@ -137,15 +147,26 @@ class Device:
         s.set_icon(s.play_button, "SP_MediaPlay")
         self.update_text()
 
-    def set_dial_value(self):
+    def set_dial_value(self, cast):
         s = self._self
-        v = self.device._cast.status.volume_level * 100
+        v = cast.status.volume_level * 100
         s.dial.valueChanged.disconnect(s.on_dial_moved)
         if v != 0:
             self.unmute_volume = v
         s.dial.setValue(int(v))
         s.set_volume_label(v)
         s.dial.valueChanged.connect(s.on_dial_moved)
+
+    def get_duration(self, status):
+        duration = 0
+        x = status.media_custom_data.get("extraParams")
+        if x == None:
+            duration = status.duration
+        else:
+            e = x.get("entity")
+            b = e.get("bundle")
+            duration = b.get("duration")
+        return duration
 
     def split_seconds(self, s):
         hours = s // 3600
@@ -176,8 +197,8 @@ class Device:
             s.status_label.setText("Idle")
 
     def update_text(self):
-        title = self.device._cast.media_controller.title
-        status_text = self.device._cast.status.status_text
+        title = self.cast.media_controller.title
+        status_text = self.cast.status.status_text
         s = self._self
         if not self.playing:
             if self.stopping:
@@ -229,7 +250,10 @@ class ComboBox(QComboBox):
             return
         s.stop(d, "Rebooting..")
         try:
-            d.cast.reboot()
+            requests.post(
+                "http://" + d.device.ip_addr + ":8008/setup/reboot",
+                json={"params": "now"},
+            )
             print(d.device.name, "rebooting")
             s.play_button.setEnabled(False)
             s.stop_button.setEnabled(False)
@@ -399,7 +423,8 @@ class DiscoverThread(QThread):
         self.s = s
 
     def run(self):
-        self.s.devices = catt.api.discover()
+        self.s.chromecasts, browser = pychromecast.discovery.discover_chromecasts()
+        browser.stop_discovery()
 
 
 class CattReadThread(QThread):
@@ -435,6 +460,10 @@ class App(QMainWindow):
     remove_device = pyqtSignal(str)
     stopping_timer_cancel = pyqtSignal(int)
     start_singleshot_timer = pyqtSignal(Device)
+
+    def closeEvent(self, event):
+        self.clean_up()
+        sys.exit(0)
 
     def create_devices_layout(self):
         self.devices_layout = QHBoxLayout()
@@ -535,8 +564,6 @@ class App(QMainWindow):
                     self.reconnect_volume = int(arg)
             except Exception as e:
                 print(e)
-        app.aboutToQuit.connect(self.clean_up)
-        app.focusChanged.connect(self.focus_changed)
         self.initUI()
 
     def discover_loop(self):
@@ -548,7 +575,7 @@ class App(QMainWindow):
         while splash_thread.isRunning():
             QThread.usleep(250)
             QApplication.processEvents()
-        self.num_devices = len(self.devices)
+        self.num_devices = len(self.chromecasts)
         if self.num_devices == 0:
             self.splash.hide()
             print("No devices found")
@@ -589,6 +616,7 @@ class App(QMainWindow):
         self.play_next.connect(self.on_play_next)
         self.stopping_timer_cancel.connect(self.on_stopping_timer_cancel)
         self.start_singleshot_timer.connect(self.on_start_singleshot_timer)
+        self.devices = []
         self.device_list = []
         if self.num_devices > 1:
             text = "devices found"
@@ -596,21 +624,30 @@ class App(QMainWindow):
             text = "device found"
         print(self.num_devices, text)
         i = 0
-        for d in self.devices:
-            cast = pychromecast.Chromecast(d.ip_addr)
+        loop = QEventLoop()
+        for d in self.chromecasts:
+            chromecasts, browser = pychromecast.get_listed_chromecasts(
+                friendly_names=[d.friendly_name]
+            )
+            cast = chromecasts[0]
             cast.wait()
-            device = Device(self, d, cast, i)
+            catt_device = CattDevice(name=d.friendly_name)
+            device = Device(self, catt_device, cast, i)
             cast.media_controller.register_status_listener(device.media_listener)
             cast.register_status_listener(device.status_listener)
             cast.register_connection_listener(device.connection_listener)
             device.disconnect_volume = round(cast.status.volume_level * 100)
-            device.filename = d._cast.media_controller.title
+            device.filename = cast.media_controller.title
             self.device_list.append(device)
-            self.combo_box.addItem(d.name)
+            self.devices.append(catt_device)
+            self.combo_box.addItem(cast.name)
             if i == 0:
-                device.set_dial_value()
-            print(d.name)
+                device.set_dial_value(cast)
+            print(cast.name)
             i = i + 1
+            if cast.media_controller.is_playing:
+                cast.media_controller.update_status()
+        self.app.focusChanged.connect(self.focus_changed)
         self.combo_box.currentIndexChanged.connect(self.on_index_changed)
         self.main_layout.addLayout(self.devices_layout)
         self.main_layout.addLayout(self.control_layout)
@@ -627,6 +664,7 @@ class App(QMainWindow):
         self.splash.finish()
         self.raise_()
         self.activateWindow()
+        loop.exec()
 
     def focus_changed(self, event):
         try:
@@ -853,7 +891,7 @@ class App(QMainWindow):
         enabled = d.playing and not d.live
         self.skip_forward_button.setEnabled(enabled)
         self.progress_slider.setEnabled(enabled)
-        duration = d.device._cast.media_controller.status.duration
+        duration = d.get_duration(d.cast.media_controller.status)
         if duration != None:
             self.progress_slider.setMaximum(int(duration))
         self.set_progress(time_to_seconds(d.time))
@@ -867,7 +905,7 @@ class App(QMainWindow):
             enabled = not d.rebooting
             self.play_button.setEnabled(enabled)
             self.stop_button.setEnabled(enabled)
-        d.set_dial_value()
+        d.set_dial_value(d.cast)
         d.update_text()
 
     def on_skip_click(self):
@@ -875,7 +913,7 @@ class App(QMainWindow):
         d = self.get_device_from_index(i)
         if d == None:
             return
-        duration = d.device._cast.media_controller.status.duration
+        duration = d.get_duration(d.cast.media_controller.status)
         if d.filename != None:
             d.kill_catt_process()
             self.on_stop_click()
@@ -911,7 +949,7 @@ class App(QMainWindow):
         if d.muted:
             d.device.volume(d.unmute_volume / 100)
         else:
-            d.unmute_volume = d.device._cast.status.volume_level * 100
+            d.unmute_volume = d.cast.status.volume_level * 100
             d.device.volume(0.0)
 
     def seek(self, d, value):
@@ -926,12 +964,12 @@ class App(QMainWindow):
         d = self.get_device_from_index(i)
         if d.progress_clicked:
             return
-        if d.device._cast.media_controller.status.supports_seek:
+        if d.cast.media_controller.status.supports_seek:
             v = self.progress_slider.value()
             self.stop_timer.emit(i)
             self.set_time(i, v)
             self.progress_label.setText(d.time.toString("hh:mm:ss"))
-            duration = d.device._cast.media_controller.status.duration
+            duration = d.get_duration(d.cast.media_controller.status)
             if duration and v != int(duration):
                 self.seek(d, v)
         else:
@@ -953,7 +991,7 @@ class App(QMainWindow):
             return
         value = self.progress_slider.value()
         d.progress_clicked = False
-        if d.device._cast.media_controller.status.supports_seek:
+        if d.cast.media_controller.status.supports_seek:
             if value > self.current_progress or value < self.current_progress:
                 self.set_time(i, value)
                 self.progress_label.setText(d.time.toString("hh:mm:ss"))
@@ -987,18 +1025,25 @@ class App(QMainWindow):
         self.volume_status_event_pending = False
 
     def on_add_device(self, ip):
+        name = ""
         for d in self.device_list:
             if d.device.ip_addr == ip:
                 last_volume = d.disconnect_volume
                 self.devices.remove(d.device)
                 self.device_list.remove(d)
+                name = d.device.name
                 break
-        d = CattDevice(ip_addr=ip)
-        d._cast.wait()
-        device = Device(self, d, d._cast, self.combo_box.count())
-        d._cast.media_controller.register_status_listener(device.media_listener)
-        d._cast.register_status_listener(device.status_listener)
-        self.devices.append(d)
+        chromecasts, browser = pychromecast.get_listed_chromecasts(
+            friendly_names=[name]
+        )
+        d = chromecasts[0]
+        d.wait()
+        browser.stop_discovery()
+        catt_device = CattDevice(name=name)
+        device = Device(self, catt_device, d, self.combo_box.count())
+        d.media_controller.register_status_listener(device.media_listener)
+        d.register_status_listener(device.status_listener)
+        self.devices.append(catt_device)
         self.device_list.append(device)
         self.combo_box.addItem(d.name)
         if self.combo_box.currentIndex() == device.index:
@@ -1009,7 +1054,7 @@ class App(QMainWindow):
         device.disconnect_volume = last_volume
         if self.reconnect_volume == -1:
             if last_volume != round(device.cast.status.volume_level * 100):
-                d.volume(last_volume / 100)
+                device.device.volume(last_volume / 100)
                 if device.index == self.combo_box.currentIndex():
                     self.set_volume_label(last_volume)
         else:
@@ -1142,11 +1187,13 @@ class MediaListener:
             d.live = status.stream_type == "LIVE"
             d.set_state_playing(i, status.current_time)
             if update_ui:
-                d.update_ui_playing(status.current_time, status.duration)
+                duration = d.get_duration(status)
+                d.update_ui_playing(status.current_time, duration)
         elif status.player_state == "PAUSED":
             d.set_state_paused(i, status.current_time)
             if update_ui:
-                d.update_ui_paused(status.current_time, status.duration)
+                duration = d.get_duration(status)
+                d.update_ui_paused(status.current_time, duration)
         elif status.player_state == "IDLE" or status.player_state == "UNKNOWN":
             d.set_state_idle(i)
             if update_ui:
@@ -1178,7 +1225,7 @@ class StatusListener:
         elif not d.muted and v == 0:
             d.muted = True
         if not s.volume_status_event_pending:
-            d.set_dial_value()
+            d.set_dial_value(d.cast)
         else:
             s.set_volume_label(v)
             if v > 0:
