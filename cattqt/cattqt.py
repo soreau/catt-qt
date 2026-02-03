@@ -197,7 +197,7 @@ class Device:
             s.status_label.setText("Idle")
 
     def update_text(self):
-        title = self.cast.media_controller.title
+        title = self.cast.media_controller.status.title
         status_text = self.cast.status.status_text
         s = self._self
         if not self.playing:
@@ -637,7 +637,7 @@ class App(QMainWindow):
             cast.register_status_listener(device.status_listener)
             cast.register_connection_listener(device.connection_listener)
             device.disconnect_volume = round(cast.status.volume_level * 100)
-            device.filename = cast.media_controller.title
+            device.filename = cast.media_controller.status.title
             self.device_list.append(device)
             self.devices.append(catt_device)
             self.combo_box.addItem(cast.name)
@@ -645,7 +645,7 @@ class App(QMainWindow):
                 device.set_dial_value(cast)
             print(cast.name)
             i = i + 1
-            if cast.media_controller.is_playing:
+            if cast.media_controller.status.player_state == "PLAYING":
                 cast.media_controller.update_status()
         self.app.focusChanged.connect(self.focus_changed)
         self.combo_box.currentIndexChanged.connect(self.on_index_changed)
