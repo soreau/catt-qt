@@ -8,7 +8,7 @@ requires=[
     "cattqt",
     "pyqt5",
     "chardet >=3.0.4",
-    "pychromecast >=12.1.4",
+    "pychromecast >=14.0.0",
 ]
 
 [project]
