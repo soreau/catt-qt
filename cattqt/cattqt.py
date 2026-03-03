@@ -197,7 +197,8 @@ class Device:
             s.status_label.setText("Idle")
 
     def update_text(self):
-        title = self.cast.media_controller.status.title
+        mc_status = self.cast.media_controller.status
+        title = mc_status.title if mc_status else None
         status_text = self.cast.status.status_text
         s = self._self
         if not self.playing:
@@ -637,7 +638,8 @@ class App(QMainWindow):
             cast.register_status_listener(device.status_listener)
             cast.register_connection_listener(device.connection_listener)
             device.disconnect_volume = round(cast.status.volume_level * 100)
-            device.filename = cast.media_controller.status.title
+            mc_status = cast.media_controller.status
+            device.filename = mc_status.title if mc_status else None
             self.device_list.append(device)
             self.devices.append(catt_device)
             self.combo_box.addItem(cast.name)
@@ -645,7 +647,7 @@ class App(QMainWindow):
                 device.set_dial_value(cast)
             print(cast.name)
             i = i + 1
-            if cast.media_controller.status.player_state == "PLAYING":
+            if mc_status and mc_status.player_state == "PLAYING":
                 cast.media_controller.update_status()
         self.app.focusChanged.connect(self.focus_changed)
         self.combo_box.currentIndexChanged.connect(self.on_index_changed)
@@ -964,12 +966,13 @@ class App(QMainWindow):
         d = self.get_device_from_index(i)
         if d.progress_clicked:
             return
-        if d.cast.media_controller.status.supports_seek:
+        mc_status = d.cast.media_controller.status
+        if mc_status and mc_status.supports_seek:
             v = self.progress_slider.value()
             self.stop_timer.emit(i)
             self.set_time(i, v)
             self.progress_label.setText(d.time.toString("hh:mm:ss"))
-            duration = d.get_duration(d.cast.media_controller.status)
+            duration = d.get_duration(mc_status)
             if duration and v != int(duration):
                 self.seek(d, v)
         else:
@@ -991,7 +994,8 @@ class App(QMainWindow):
             return
         value = self.progress_slider.value()
         d.progress_clicked = False
-        if d.cast.media_controller.status.supports_seek:
+        mc_status = d.cast.media_controller.status
+        if mc_status and mc_status.supports_seek:
             if value > self.current_progress or value < self.current_progress:
                 self.set_time(i, value)
                 self.progress_label.setText(d.time.toString("hh:mm:ss"))
